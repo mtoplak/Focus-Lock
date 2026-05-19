@@ -36,8 +36,11 @@ backend/
 
 ## Environment
 
-| Variable     | Default                  | Description              |
-|-------------|--------------------------|--------------------------|
-| `PORT`      | `3001`                   | HTTP port                |
-| `NODE_ENV`  | `development`            | Runtime environment      |
-| `CORS_ORIGIN` | `http://localhost:5173` | Allowed frontend origin |
+| Variable        | Default                                                       | Description              |
+|----------------|---------------------------------------------------------------|--------------------------|
+| `PORT`         | `3001`                                                        | HTTP port                |
+| `NODE_ENV`     | `development`                                                 | Runtime environment      |
+| `CORS_ORIGIN`  | `http://localhost:5173`                                       | Allowed frontend origin  |
+| `DATABASE_URL` | `postgresql://focuslock:focuslock@localhost:5432/focuslock` | PostgreSQL connection    |
+
+With Docker Compose, Postgres runs as service `db` and Adminer is on http://localhost:8081 (see root `README.md`).

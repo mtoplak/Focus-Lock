@@ -5,4 +5,7 @@ export const env = {
   nodeEnv: process.env.NODE_ENV ?? 'development',
   isProduction: (process.env.NODE_ENV ?? 'development') === 'production',
   corsOrigin: process.env.CORS_ORIGIN ?? 'http://localhost:5173',
+  databaseUrl:
+    process.env.DATABASE_URL ??
+    'postgresql://focuslock:focuslock@localhost:5432/focuslock',
 } as const
