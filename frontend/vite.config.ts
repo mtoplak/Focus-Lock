@@ -3,7 +3,15 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
+const usePolling = process.env.CHOKIDAR_USEPOLLING === 'true'
+
 export default defineConfig({
+  server: {
+    host: true,
+    port: 5173,
+    strictPort: true,
+    watch: usePolling ? { usePolling: true, interval: 300 } : undefined,
+  },
   plugins: [
     react(),
     tailwindcss(),
