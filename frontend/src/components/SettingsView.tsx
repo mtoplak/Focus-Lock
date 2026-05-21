@@ -14,115 +14,161 @@ export function SettingsView({ settings, onChange }: SettingsViewProps) {
   return (
     <div className="mx-auto w-full max-w-2xl">
       <header className="mb-8">
-        <h2 className="text-2xl font-semibold tracking-tight text-slate-50">Nastavitve</h2>
-        <p className="mt-1 text-sm text-slate-400">
-          Prilagodi seje svojemu ritmu in delovnemu slogu.
+        <h2 className="text-[24px] font-semibold tracking-tight text-[color:var(--color-ink)]">
+          Settings
+        </h2>
+        <p className="mt-1 text-[14px] text-[color:var(--color-ink-muted)]">
+          Tailor sessions to your workflow.
         </p>
       </header>
 
-      <section className="mb-6 rounded-xl border border-slate-800 bg-slate-900/40 p-6">
-        <h3 className="mb-4 text-base font-medium text-slate-100">Trajanje</h3>
+      <section className="mb-5 rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-6">
+        <h3 className="mb-5 text-[15px] font-semibold tracking-tight text-[color:var(--color-ink)]">
+          Duration
+        </h3>
         <div className="grid gap-4 sm:grid-cols-3">
-          <NumberField
-            label="Fokus (min)"
+          <Stepper
+            label="Focus"
             value={settings.focusMinutes}
             min={1}
             max={120}
+            step={5}
             onChange={(v) => update('focusMinutes', v)}
           />
-          <NumberField
-            label="Kratek odmor (min)"
+          <Stepper
+            label="Short break"
             value={settings.shortBreakMinutes}
             min={1}
             max={60}
+            step={1}
             onChange={(v) => update('shortBreakMinutes', v)}
           />
-          <NumberField
-            label="Dolg odmor (min)"
+          <Stepper
+            label="Long break"
             value={settings.longBreakMinutes}
             min={1}
             max={60}
+            step={5}
             onChange={(v) => update('longBreakMinutes', v)}
           />
         </div>
-        <div className="mt-4">
-          <NumberField
-            label="Število sej do dolgega odmora"
+        <div className="mt-5 border-t border-[color:var(--color-line)] pt-5">
+          <Stepper
+            label="Sessions until long break"
             value={settings.sessionsUntilLongBreak}
             min={2}
             max={10}
+            step={1}
             onChange={(v) => update('sessionsUntilLongBreak', v)}
+            wide
           />
         </div>
       </section>
 
-      <section className="mb-6 rounded-xl border border-slate-800 bg-slate-900/40 p-6">
-        <h3 className="mb-4 text-base font-medium text-slate-100">Avtomatizacija</h3>
-        <div className="space-y-4">
+      <section className="mb-6 rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-6">
+        <h3 className="mb-3 text-[15px] font-semibold tracking-tight text-[color:var(--color-ink)]">
+          Automation
+        </h3>
+        <div className="divide-y divide-[color:var(--color-line)]">
           <ToggleRow
-            label="Samodejno začni odmore"
-            description="Po zaključku fokus seje takoj zaženi odmor."
+            label="Auto-start breaks"
+            description="Start a break as soon as a focus session ends."
             checked={settings.autoStartBreaks}
             onChange={(v) => update('autoStartBreaks', v)}
           />
           <ToggleRow
-            label="Samodejno začni fokus"
-            description="Po odmoru takoj nadaljuj z naslednjo fokus sejo."
+            label="Auto-start focus"
+            description="Continue to the next focus session after a break."
             checked={settings.autoStartFocus}
             onChange={(v) => update('autoStartFocus', v)}
           />
           <ToggleRow
-            label="Zvočno opozorilo"
-            description="Zaigraj tih signal ob koncu seje."
+            label="Sound alert"
+            description="Play a soft signal at session end."
             checked={settings.soundEnabled}
             onChange={(v) => update('soundEnabled', v)}
           />
         </div>
       </section>
 
-      <div className="flex justify-end">
+      <div className="flex items-center justify-between">
+        <p className="text-[12.5px] text-[color:var(--color-ink-faint)]">
+          Saved automatically.
+        </p>
         <button
           type="button"
           onClick={() => onChange(DEFAULT_SETTINGS)}
-          className="rounded-lg border border-slate-800 bg-slate-900/60 px-4 py-2 text-sm text-slate-400 transition hover:border-slate-700 hover:text-slate-200"
+          className="rounded-md border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3.5 py-1.5 text-[12.5px] text-[color:var(--color-ink-muted)] transition hover:border-[color:var(--color-line-strong)] hover:text-[color:var(--color-ink)]"
         >
-          Ponastavi na privzeto
+          Reset to defaults
         </button>
       </div>
     </div>
   )
 }
 
-function NumberField({
+function Stepper({
   label,
   value,
   min,
   max,
+  step,
   onChange,
+  wide,
 }: {
   label: string
   value: number
   min: number
   max: number
+  step: number
   onChange: (v: number) => void
+  wide?: boolean
 }) {
+  const clamp = (v: number) => Math.min(max, Math.max(min, v))
+  const dec = () => onChange(clamp(value - step))
+  const inc = () => onChange(clamp(value + step))
+
   return (
-    <label className="block">
-      <span className="mb-1.5 block text-xs font-medium tracking-wide text-slate-400 uppercase">
+    <div className={wide ? 'flex items-center justify-between gap-4' : ''}>
+      <div className="mb-1.5 text-[11.5px] font-medium tracking-wide text-[color:var(--color-ink-muted)]">
         {label}
-      </span>
-      <input
-        type="number"
-        value={value}
-        min={min}
-        max={max}
-        onChange={(e) => {
-          const next = Number(e.target.value)
-          if (Number.isFinite(next)) onChange(Math.min(max, Math.max(min, next)))
-        }}
-        className="w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 font-mono text-slate-100 tabular-nums focus:border-indigo-500/50 focus:outline-none"
-      />
-    </label>
+      </div>
+      <div className={`flex items-center rounded-lg border border-[color:var(--color-line)] bg-[color:var(--color-canvas)] ${wide ? '' : ''}`}>
+        <button
+          type="button"
+          onClick={dec}
+          disabled={value <= min}
+          className="flex h-9 w-9 items-center justify-center text-[color:var(--color-ink-muted)] transition hover:text-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-30"
+          aria-label="Decrease"
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+            <path d="M5 12h14" />
+          </svg>
+        </button>
+        <input
+          type="number"
+          value={value}
+          min={min}
+          max={max}
+          onChange={(e) => {
+            const next = Number(e.target.value)
+            if (Number.isFinite(next)) onChange(clamp(next))
+          }}
+          className="w-12 bg-transparent py-2 text-center font-mono text-[15px] font-medium tabular-nums text-[color:var(--color-ink)] focus:outline-none"
+        />
+        <button
+          type="button"
+          onClick={inc}
+          disabled={value >= max}
+          className="flex h-9 w-9 items-center justify-center text-[color:var(--color-ink-muted)] transition hover:text-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-30"
+          aria-label="Increase"
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+        </button>
+      </div>
+    </div>
   )
 }
 
@@ -138,23 +184,27 @@ function ToggleRow({
   onChange: (v: boolean) => void
 }) {
   return (
-    <div className="flex items-start justify-between gap-4">
+    <div className="flex items-start justify-between gap-4 py-4 first:pt-2 last:pb-2">
       <div className="flex-1">
-        <div className="text-sm font-medium text-slate-100">{label}</div>
-        <div className="text-xs text-slate-500">{description}</div>
+        <div className="text-[14px] font-medium text-[color:var(--color-ink)]">{label}</div>
+        <div className="mt-0.5 text-[12.5px] text-[color:var(--color-ink-muted)]">
+          {description}
+        </div>
       </div>
       <button
         type="button"
         role="switch"
         aria-checked={checked}
         onClick={() => onChange(!checked)}
-        className={`relative h-6 w-11 shrink-0 rounded-full transition ${
-          checked ? 'bg-indigo-500' : 'bg-slate-700'
+        className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition-colors duration-200 ${
+          checked
+            ? 'bg-[color:var(--color-accent)]'
+            : 'bg-[color:var(--color-line-strong)]'
         }`}
       >
         <span
-          className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition ${
-            checked ? 'left-5' : 'left-0.5'
+          className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all duration-200 ${
+            checked ? 'left-[22px]' : 'left-0.5'
           }`}
         />
       </button>

@@ -13,9 +13,9 @@ type View = 'timer' | 'block' | 'stats' | 'settings'
 const NAV: { id: View; label: string; icon: ReactNode }[] = [
   {
     id: 'timer',
-    label: 'Časovnik',
+    label: 'Timer',
     icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="13" r="8" />
         <path d="M12 9v4l2 2M9 2h6" />
       </svg>
@@ -23,9 +23,9 @@ const NAV: { id: View; label: string; icon: ReactNode }[] = [
   },
   {
     id: 'block',
-    label: 'Blokade',
+    label: 'Blocks',
     icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="9" />
         <path d="M5 5l14 14" />
       </svg>
@@ -33,18 +33,18 @@ const NAV: { id: View; label: string; icon: ReactNode }[] = [
   },
   {
     id: 'stats',
-    label: 'Statistika',
+    label: 'Stats',
     icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
         <path d="M4 20V10M10 20V4M16 20v-6M22 20H2" />
       </svg>
     ),
   },
   {
     id: 'settings',
-    label: 'Nastavitve',
+    label: 'Settings',
     icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="3" />
         <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
       </svg>
@@ -86,54 +86,66 @@ function App() {
   const timer = useTimer(settings, recordFocus)
 
   return (
-    <div className="flex min-h-dvh bg-slate-950 text-slate-100">
-      <aside className="hidden w-60 shrink-0 border-r border-slate-900 bg-slate-950/80 p-6 md:flex md:flex-col">
-        <div className="mb-8 flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/20 ring-1 ring-indigo-500/40">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-indigo-300">
+    <div className="flex min-h-dvh bg-[color:var(--color-canvas)] text-[color:var(--color-ink)] md:h-dvh md:min-h-0 md:overflow-hidden">
+      <aside className="hidden w-60 shrink-0 border-r border-[color:var(--color-line)] px-5 py-7 md:flex md:flex-col">
+        <div className="mb-9 flex items-center gap-2.5 px-2">
+          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-[color:var(--color-ink)] shadow-[0_1px_2px_rgba(0,0,0,0.12)]">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
               <rect x="5" y="11" width="14" height="10" rx="2" />
               <path d="M8 11V7a4 4 0 1 1 8 0v4" />
             </svg>
           </div>
-          <span className="text-base font-semibold tracking-tight text-slate-50">Focus Lock</span>
+          <span className="text-[15px] font-semibold tracking-tight text-[color:var(--color-ink)]">
+            Focus Lock
+          </span>
         </div>
 
-        <nav className="flex flex-1 flex-col gap-1">
-          {NAV.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => setView(item.id)}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
-                view === item.id
-                  ? 'bg-slate-900 text-slate-50'
-                  : 'text-slate-400 hover:bg-slate-900/60 hover:text-slate-200'
-              }`}
-            >
-              <span className={view === item.id ? 'text-indigo-300' : ''}>{item.icon}</span>
-              {item.label}
-            </button>
-          ))}
+        <nav className="flex flex-1 flex-col gap-0.5">
+          {NAV.map((item) => {
+            const active = view === item.id
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setView(item.id)}
+                className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-[13.5px] font-medium transition ${
+                  active
+                    ? 'bg-[color:var(--color-surface-2)] text-[color:var(--color-ink)]'
+                    : 'text-[color:var(--color-ink-muted)] hover:bg-[color:var(--color-surface-2)]/60 hover:text-[color:var(--color-ink-soft)]'
+                }`}
+              >
+                <span className={active ? 'text-[color:var(--color-ink)]' : ''}>
+                  {item.icon}
+                </span>
+                <span className="flex-1 text-left">{item.label}</span>
+              </button>
+            )
+          })}
         </nav>
-
-        <div className="mt-auto rounded-lg border border-slate-800/80 bg-slate-900/40 p-3 text-xs text-slate-400">
-          <div className="mb-1 font-medium text-slate-200">Ostani fokusiran</div>
-          Tvoja produktivnost na enem mestu.
-        </div>
       </aside>
 
       {/* Mobile top bar */}
-      <div className="fixed inset-x-0 top-0 z-10 flex items-center justify-between border-b border-slate-900 bg-slate-950/95 px-4 py-3 backdrop-blur md:hidden">
-        <span className="text-sm font-semibold tracking-tight">Focus Lock</span>
-        <nav className="flex gap-1">
+      <div className="fixed inset-x-0 top-0 z-20 flex items-center justify-between border-b border-[color:var(--color-line)] bg-[color:var(--color-canvas)]/90 px-4 py-3 backdrop-blur-md md:hidden">
+        <div className="flex items-center gap-2">
+          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-[color:var(--color-ink)]">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="5" y="11" width="14" height="10" rx="2" />
+              <path d="M8 11V7a4 4 0 1 1 8 0v4" />
+            </svg>
+          </div>
+          <span className="text-[14px] font-semibold tracking-tight">Focus Lock</span>
+        </div>
+        <nav className="flex gap-0.5">
           {NAV.map((item) => (
             <button
               key={item.id}
               type="button"
               onClick={() => setView(item.id)}
               aria-label={item.label}
-              className={`rounded-lg p-2 transition ${
-                view === item.id ? 'bg-slate-900 text-indigo-300' : 'text-slate-400'
+              className={`rounded-md p-2 transition ${
+                view === item.id
+                  ? 'bg-[color:var(--color-surface-2)] text-[color:var(--color-ink)]'
+                  : 'text-[color:var(--color-ink-muted)]'
               }`}
             >
               {item.icon}
@@ -142,9 +154,15 @@ function App() {
         </nav>
       </div>
 
-      <main className="flex-1 overflow-y-auto px-4 pt-20 pb-12 md:px-10 md:pt-12">
+      <main
+        className={`relative flex-1 px-5 pt-20 pb-16 md:px-12 md:pt-10 md:pb-10 ${
+          view === 'timer' || view === 'block'
+            ? 'overflow-y-auto md:overflow-hidden'
+            : 'overflow-y-auto'
+        }`}
+      >
         {view === 'timer' && (
-          <div className="flex w-full items-center justify-center">
+          <div className="flex w-full items-start justify-center md:h-full md:items-center">
             <Timer timer={timer} settings={settings} task={task} onTaskChange={setTask} />
           </div>
         )}

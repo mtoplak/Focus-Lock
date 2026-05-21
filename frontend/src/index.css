@@ -1,1 +1,81 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 @import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
+
+  /* light, warm-neutral surfaces */
+  --color-canvas: #fafaf7;
+  --color-surface: #ffffff;
+  --color-surface-2: #f4f3ef;
+  --color-surface-3: #ebe9e3;
+  --color-line: #e7e5e0;
+  --color-line-strong: #d1cec7;
+
+  --color-ink: #1a1917;
+  --color-ink-soft: #38352f;
+  --color-ink-muted: #6b665d;
+  --color-ink-faint: #a39e95;
+  --color-ink-fainter: #c4c0b6;
+
+  /* single decisive accent */
+  --color-accent: #2563eb;
+  --color-accent-strong: #1d4ed8;
+  --color-accent-soft: #dbe7ff;
+  --color-accent-tint: #eff4ff;
+
+  --color-success: #16a34a;
+  --color-success-soft: #dcfce7;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-feature-settings: 'cv11', 'ss01', 'cv02';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.005em;
+}
+
+/* native number-input chrome cleanup */
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
+}
+
+::selection {
+  background: var(--color-accent-soft);
+  color: var(--color-ink);
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--color-line-strong);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--color-ink-faint);
+  background-clip: padding-box;
+  border: 2px solid transparent;
+}

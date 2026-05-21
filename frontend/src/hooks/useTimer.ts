@@ -47,9 +47,10 @@ export function useTimer(
   useEffect(() => {
     if (isRunning) return
     const seconds = modeDurationMinutes(mode, settings) * 60
+    if (seconds === totalSeconds) return
     setTotalSeconds(seconds)
     setSecondsLeft(seconds)
-  }, [settings, mode, isRunning])
+  }, [settings, mode, isRunning, totalSeconds])
 
   // Tick
   useEffect(() => {
