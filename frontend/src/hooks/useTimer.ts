@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Settings, TimerMode } from '../types'
+import { notifyTimer } from '../lib/notify'
 
 export interface UseTimerResult {
   mode: TimerMode
@@ -66,6 +67,10 @@ export function useTimer(
     if (secondsLeft > 0 || !isRunning) return
     setIsRunning(false)
 
+    if (settings.notificationsEnabled) {
+      void notifyTimer('end', mode)
+    }
+
     if (settings.soundEnabled) {
       try {
         const ctx = new (window.AudioContext ||
@@ -95,17 +100,30 @@ export function useTimer(
       setModeState(nextMode)
       setTotalSeconds(seconds)
       setSecondsLeft(seconds)
-      if (settings.autoStartBreaks) setIsRunning(true)
+      if (settings.autoStartBreaks) {
+        if (settings.notificationsEnabled) void notifyTimer('start', nextMode)
+        setIsRunning(true)
+      }
     } else {
       const seconds = settings.focusMinutes * 60
       setModeState('focus')
       setTotalSeconds(seconds)
       setSecondsLeft(seconds)
-      if (settings.autoStartFocus) setIsRunning(true)
+      if (settings.autoStartFocus) {
+        if (settings.notificationsEnabled) void notifyTimer('start', 'focus')
+        setIsRunning(true)
+      }
     }
   }, [secondsLeft, isRunning, mode, settings, completedFocusSessions])
 
-  const start = useCallback(() => setIsRunning(true), [])
+  const start = useCallback(() => {
+    setIsRunning((prev) => {
+      if (!prev && settings.notificationsEnabled) {
+        void notifyTimer('start', mode)
+      }
+      return true
+    })
+  }, [mode, settings.notificationsEnabled])
   const pause = useCallback(() => setIsRunning(false), [])
   const reset = useCallback(() => {
     const seconds = modeDurationMinutes(mode, settings) * 60

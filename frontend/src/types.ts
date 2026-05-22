@@ -8,6 +8,7 @@ export interface Settings {
   autoStartBreaks: boolean
   autoStartFocus: boolean
   soundEnabled: boolean
+  notificationsEnabled: boolean
 }
 
 export interface BlockedItem {
@@ -30,6 +31,7 @@ export const DEFAULT_SETTINGS: Settings = {
   autoStartBreaks: true,
   autoStartFocus: false,
   soundEnabled: true,
+  notificationsEnabled: true,
 }
 
 export const DEFAULT_BLOCKED: BlockedItem[] = [

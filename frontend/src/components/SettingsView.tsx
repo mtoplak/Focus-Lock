@@ -1,5 +1,6 @@
 import type { Settings } from '../types'
 import { DEFAULT_SETTINGS } from '../types'
+import { ensureNotificationPermission, notificationsSupported } from '../lib/notify'
 
 interface SettingsViewProps {
   settings: Settings
@@ -9,6 +10,20 @@ interface SettingsViewProps {
 export function SettingsView({ settings, onChange }: SettingsViewProps) {
   const update = <K extends keyof Settings>(key: K, value: Settings[K]) => {
     onChange({ ...settings, [key]: value })
+  }
+
+  const supportsNotifications = notificationsSupported()
+  const notificationsBlocked =
+    supportsNotifications && typeof Notification !== 'undefined' && Notification.permission === 'denied'
+
+  const handleNotificationsToggle = async (next: boolean) => {
+    if (!next) {
+      update('notificationsEnabled', false)
+      return
+    }
+    if (!supportsNotifications) return
+    const permission = await ensureNotificationPermission()
+    update('notificationsEnabled', permission === 'granted')
   }
 
   return (
@@ -87,6 +102,21 @@ export function SettingsView({ settings, onChange }: SettingsViewProps) {
             description="Play a soft signal at session end."
             checked={settings.soundEnabled}
             onChange={(v) => update('soundEnabled', v)}
+          />
+          <ToggleRow
+            label="Notifications"
+            description={
+              !supportsNotifications
+                ? 'Not supported on this device.'
+                : notificationsBlocked
+                  ? 'Blocked — enable in your browser site settings.'
+                  : 'Notify when a session starts and finishes.'
+            }
+            checked={settings.notificationsEnabled && !notificationsBlocked}
+            disabled={!supportsNotifications || notificationsBlocked}
+            onChange={(v) => {
+              void handleNotificationsToggle(v)
+            }}
           />
         </div>
       </section>
@@ -177,11 +207,13 @@ function ToggleRow({
   description,
   checked,
   onChange,
+  disabled,
 }: {
   label: string
   description: string
   checked: boolean
   onChange: (v: boolean) => void
+  disabled?: boolean
 }) {
   return (
     <div className="flex items-start justify-between gap-4 py-4 first:pt-2 last:pb-2">
@@ -195,12 +227,13 @@ function ToggleRow({
         type="button"
         role="switch"
         aria-checked={checked}
+        disabled={disabled}
         onClick={() => onChange(!checked)}
         className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition-colors duration-200 ${
           checked
             ? 'bg-[color:var(--color-accent)]'
             : 'bg-[color:var(--color-line-strong)]'
-        }`}
+        } ${disabled ? 'cursor-not-allowed opacity-40' : ''}`}
       >
         <span
           className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all duration-200 ${

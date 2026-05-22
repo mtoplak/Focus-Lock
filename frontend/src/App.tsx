@@ -108,7 +108,7 @@ function App() {
                 key={item.id}
                 type="button"
                 onClick={() => setView(item.id)}
-                className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-[13.5px] font-medium transition ${
+                className={`flex cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 text-[13.5px] font-medium transition ${
                   active
                     ? 'bg-[color:var(--color-surface-2)] text-[color:var(--color-ink)]'
                     : 'text-[color:var(--color-ink-muted)] hover:bg-[color:var(--color-surface-2)]/60 hover:text-[color:var(--color-ink-soft)]'
@@ -142,7 +142,7 @@ function App() {
               type="button"
               onClick={() => setView(item.id)}
               aria-label={item.label}
-              className={`rounded-md p-2 transition ${
+              className={`cursor-pointer rounded-md p-2 transition ${
                 view === item.id
                   ? 'bg-[color:var(--color-surface-2)] text-[color:var(--color-ink)]'
                   : 'text-[color:var(--color-ink-muted)]'
