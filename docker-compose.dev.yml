@@ -12,15 +12,25 @@ services:
       context: ./backend
       dockerfile: Dockerfile.dev
     container_name: focus-lock-backend-dev
-    command: npm run dev
+    # Sync deps when package-lock changes (named node_modules volume can go stale)
+    command: sh -c "npm ci && npm run dev"
     environment:
       PORT: 3001
       NODE_ENV: development
       CORS_ORIGIN: http://localhost:5173
       DATABASE_URL: postgresql://${POSTGRES_USER:-focuslock}:${POSTGRES_PASSWORD:-focuslock}@db:5432/${POSTGRES_DB:-focuslock}
+      RUN_MIGRATIONS_ON_START: "true"
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL:-http://localhost:3001/api/auth/google/callback}
+      FRONTEND_AUTH_CALLBACK_URL: ${FRONTEND_AUTH_CALLBACK_URL:-http://localhost:5173/auth/callback}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-dev-only-jwt-secret-change-before-production-32+}
+      JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN:-15m}
+      REFRESH_TOKEN_EXPIRES_DAYS: ${REFRESH_TOKEN_EXPIRES_DAYS:-30}
       CHOKIDAR_USEPOLLING: "true"
     volumes:
       - ./backend/src:/app/src
+      - ./backend/migrations:/app/migrations
       - ./backend/tsconfig.json:/app/tsconfig.json
       - ./backend/package.json:/app/package.json
       - ./backend/package-lock.json:/app/package-lock.json
@@ -33,7 +43,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile.dev
     container_name: focus-lock-frontend-dev
-    command: npm run dev -- --host 0.0.0.0
+    command: sh -c "npm ci && npm run dev -- --host 0.0.0.0"
     environment:
       CHOKIDAR_USEPOLLING: "true"
       VITE_HMR_HOST: localhost

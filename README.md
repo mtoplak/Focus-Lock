@@ -49,11 +49,12 @@ What the dev override changes:
 - File watching uses polling (`CHOKIDAR_USEPOLLING=true`) so changes propagate reliably from Windows/macOS into the container.
 - `CORS_ORIGIN` on the backend is set to `http://localhost:5173` to match Vite.
 
-If you add a new dependency, rebuild the affected container so it lands in the named volume:
+After adding npm dependencies, restart the dev stack (each service runs `npm ci` on start). If a package is still missing, remove the stale volume and bring the stack up again:
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.dev.yml build frontend
-# or: ...build backend
+docker compose -f docker-compose.yml -f docker-compose.dev.yml down
+docker volume rm focus-lock_backend_node_modules
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ```
 
 To override defaults, create a `.env` at the repo root:

@@ -6,6 +6,7 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 COPY tsconfig.json ./
+COPY migrations ./migrations
 COPY src ./src
 RUN npm run build
 
@@ -19,6 +20,7 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
 COPY --from=build /app/dist ./dist
+COPY --from=build /app/migrations ./migrations
 
 EXPOSE 3001
 

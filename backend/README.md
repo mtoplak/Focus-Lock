@@ -1,46 +1,39 @@
 # Focus Lock — Backend
 
-TypeScript + Express API boilerplate.
+TypeScript + Express API with PostgreSQL and **Google Sign-In**.
 
 ## Scripts
 
 ```bash
 npm install
-cp .env.example .env   # optional; defaults work for local dev
-npm run dev            # http://localhost:3001 with hot reload
-npm run build          # compile to dist/
-npm start              # run compiled output
+cp .env.example .env   # add Google OAuth credentials
+npm run dev
 ```
 
 ## Stack
 
 - **Express 4** — HTTP server
-- **TypeScript 5.7** — ESM (`"type": "module"`)
-- **tsx** — dev server with watch mode
-- **cors** — allow the Vite frontend origin by default
-- **dotenv** — environment variables from `.env`
+- **google-auth-library** — Google OAuth 2.0 / OpenID Connect
+- **jose** — JWT access tokens
+- **PostgreSQL** — users + refresh tokens
 
-## Project layout
+## Authentication
 
-```
-backend/
-├── src/
-│   ├── index.ts        # Server entry
-│   ├── app.ts          # Express app factory
-│   ├── config/env.ts   # Typed env config
-│   └── routes/
-│       └── health.ts   # GET /api/health
-├── .env.example
-└── tsconfig.json
-```
+See [docs/AUTH.md](./docs/AUTH.md).
+
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /api/auth/google` | Start sign-in |
+| `POST /api/auth/refresh` | Renew tokens |
+| `GET /api/auth/me` | Profile (Bearer) |
+| `POST /api/auth/logout` | Revoke refresh token |
 
 ## Environment
 
-| Variable        | Default                                                       | Description              |
-|----------------|---------------------------------------------------------------|--------------------------|
-| `PORT`         | `3001`                                                        | HTTP port                |
-| `NODE_ENV`     | `development`                                                 | Runtime environment      |
-| `CORS_ORIGIN`  | `http://localhost:5173`                                       | Allowed frontend origin  |
-| `DATABASE_URL` | `postgresql://focuslock:focuslock@localhost:5432/focuslock` | PostgreSQL connection    |
-
-With Docker Compose, Postgres runs as service `db` and Adminer is on http://localhost:8081 (see root `README.md`).
+| Variable | Description |
+|----------|-------------|
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | From Google Cloud Console |
+| `GOOGLE_CALLBACK_URL` | Backend callback (default port 3001) |
+| `FRONTEND_AUTH_CALLBACK_URL` | Frontend receives tokens (default Vite 5173) |
+| `JWT_ACCESS_SECRET` | Access token signing secret |
+| `DATABASE_URL` | PostgreSQL connection string |

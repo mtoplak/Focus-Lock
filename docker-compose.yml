@@ -46,6 +46,14 @@ services:
       NODE_ENV: production
       CORS_ORIGIN: http://localhost:8080
       DATABASE_URL: postgresql://${POSTGRES_USER:-focuslock}:${POSTGRES_PASSWORD:-focuslock}@db:5432/${POSTGRES_DB:-focuslock}
+      RUN_MIGRATIONS_ON_START: "true"
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL:-http://localhost:3001/api/auth/google/callback}
+      FRONTEND_AUTH_CALLBACK_URL: ${FRONTEND_AUTH_CALLBACK_URL:-http://localhost:8080/auth/callback}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-dev-only-jwt-secret-change-before-production-32+}
+      JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN:-15m}
+      REFRESH_TOKEN_EXPIRES_DAYS: ${REFRESH_TOKEN_EXPIRES_DAYS:-30}
     depends_on:
       db:
         condition: service_healthy
