@@ -6,6 +6,7 @@ TypeScript + Vite + React + Tailwind CSS + PWA boilerplate.
 
 ```bash
 npm install
+cp .env.example .env   # optional; VITE_API_URL defaults to http://localhost:3001
 npm run dev      # http://localhost:5173 (PWA dev mode enabled)
 npm run build    # production build to dist/
 npm run preview  # serve dist/
@@ -33,4 +34,14 @@ frontend/
 └── tsconfig*.json
 ```
 
-Replace `public/favicon.svg` and extend the manifest in `vite.config.ts` with PNG icons (192×192, 512×512) before shipping installable PWAs to all platforms.
+## Authentication
+
+| Route | Purpose |
+|-------|---------|
+| `/login` | Google sign-in page |
+| `/auth/callback` | OAuth return (tokens in query) |
+| `/` | App (requires sign-in) |
+
+Sign out via the account menu (top-right on desktop, mobile header).
+
+Ensure `FRONTEND_AUTH_CALLBACK_URL` on the backend matches your dev URL (`http://localhost:5173/auth/callback`).
