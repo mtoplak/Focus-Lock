@@ -25,20 +25,22 @@ pub async fn run(state: AppState) {
             if needs_apply {
                 match hosts::apply(&snap.blocked_urls) {
                     Ok(()) => {
-                        info!(target: "hosts", "applied {} domain(s)", snap.blocked_urls.len());
+                        info!("applied {} domain(s)", snap.blocked_urls.len());
                         hosts::flush_dns_cache();
+                        #[cfg(windows)]
+                        crate::connections::reset_browser_connections();
                         hosts_active = true;
                         last_url_key = Some(url_key);
                         state.set_url_status(UrlBlockStatus::Active);
                     }
                     Err(e) if e.is_permission_denied() => {
-                        warn!(target: "hosts", "{e}");
+                        warn!("{e}");
                         hosts_active = false;
                         last_url_key = None;
                         state.set_url_status(UrlBlockStatus::NeedsAdmin);
                     }
                     Err(e) => {
-                        warn!(target: "hosts", "{e}");
+                        warn!("{e}");
                         hosts_active = false;
                         last_url_key = None;
                         state.set_url_status(UrlBlockStatus::Error {
@@ -50,14 +52,14 @@ pub async fn run(state: AppState) {
         } else if hosts_active {
             match hosts::remove() {
                 Ok(()) => {
-                    info!(target: "hosts", "removed block section");
+                    info!("removed block section");
                     hosts::flush_dns_cache();
                     hosts_active = false;
                     last_url_key = None;
                     state.set_url_status(UrlBlockStatus::Idle);
                 }
                 Err(e) => {
-                    warn!(target: "hosts", "remove failed: {e}");
+                    warn!("remove failed: {e}");
                 }
             }
         }
@@ -76,13 +78,13 @@ pub async fn run(state: AppState) {
 
             if snap.blocked_apps.contains(&lower) || snap.blocked_apps.contains(stripped) {
                 if proc.kill() {
-                    info!(target: "blocker", "killed {}", raw);
+                    info!("killed {}", raw);
                     state.record_kill(raw);
                 } else {
-                    warn!(target: "blocker", "failed to kill {}", raw);
+                    warn!("failed to kill {}", raw);
                 }
             } else {
-                debug!(target: "blocker", "skip {}", raw);
+                debug!("skip {}", raw);
             }
         }
     }

@@ -26,6 +26,11 @@ lnk = "0.5"
 
 [target.'cfg(windows)'.dependencies]
 systemicons = "0.7"
+windows = { version = "0.58", features = [
+    "Win32_NetworkManagement_IpHelper",
+    "Win32_Networking_WinSock",
+    "Win32_Foundation",
+] }
 
 [profile.release]
 opt-level = "z"

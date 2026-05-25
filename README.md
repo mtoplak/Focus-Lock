@@ -136,12 +136,13 @@ browser — those need OS-level access. The agent in [desktop-agent/](desktop-ag
 is a small Rust binary that runs locally on Windows, exposes an HTTP server on
 `127.0.0.1:7777`, and is driven by the PWA over `localhost`.
 
-| Capability               | Mechanism                                            | Admin required? |
-|--------------------------|------------------------------------------------------|-----------------|
-| Desktop app blocking     | Polls processes every 2 s, kills matches            | No              |
-| URL blocking             | Rewrites `C:\Windows\System32\drivers\etc\hosts`    | Yes             |
-| Detect installed apps    | Scans Start Menu shortcuts + running processes      | No              |
-| Show app icons in picker | `systemicons` extracts the exe's icon as PNG         | No              |
+| Capability               | Mechanism                                                                                     | Admin required? |
+|--------------------------|-----------------------------------------------------------------------------------------------|-----------------|
+| Desktop app blocking     | Polls processes every 2 s, kills matches                                                      | No              |
+| URL blocking             | Rewrites `C:\Windows\System32\drivers\etc\hosts` and `ipconfig /flushdns`                     | Yes             |
+| Reset browser network    | Force-closes existing TCP connections from major browsers so the hosts block bites right away | Yes (with URL blocking) |
+| Detect installed apps    | Scans Start Menu shortcuts + running processes, dedupes by exe name                            | No              |
+| Show app icons in picker | `systemicons` extracts the exe's icon as PNG, served from `/icon/:exe`                         | No              |
 
 ### Run the agent
 
@@ -149,32 +150,33 @@ Prerequisite: **Rust toolchain** — install via [rustup.rs](https://rustup.rs/)
 (pick the default install; restart your shell so PATH picks up `cargo`).
 
 ```powershell
-# For app blocking only (no admin needed):
+# App blocking only (no admin needed):
 cd desktop-agent
 cargo run
 
-# For URL blocking too: open PowerShell as Administrator
-# (Win key → type "powershell" → right-click → "Run as administrator"), then:
+# App + URL blocking: open PowerShell as Administrator
+# (Win key → "powershell" → right-click → "Run as administrator"), then:
 cd desktop-agent
 cargo run
 ```
 
-The first build takes 1–3 minutes (compiles dependencies); incremental builds
-are seconds. The agent prints to stdout — keep the terminal open. `Ctrl+C` to
-stop. The agent removes its hosts-file entries on shutdown.
+The first build takes 1–3 minutes; incremental builds are seconds. The agent
+prints to stdout — keep the terminal open. `Ctrl+C` to stop; it removes its
+hosts-file entries on the way out, and again on the next startup as a safety
+net against unclean exits.
 
 For a release binary: `cargo build --release` produces
 `desktop-agent/target/release/focuslock-agent.exe` (~3–4 MB).
 
 ### How the PWA talks to it
 
-| Endpoint            | Method | Purpose                                          |
-|---------------------|--------|--------------------------------------------------|
-| `GET /`             | —      | Liveness check                                   |
-| `GET /status`       | —      | Current state, last-killed app, URL block status |
-| `POST /sync`        | JSON   | Push block list + focus state                    |
-| `GET /installed-apps` | —    | Discover apps from Start Menu + running procs    |
-| `GET /icon/:exe`    | —      | PNG icon for an exe (cached for 1 day)           |
+| Endpoint              | Method | Body / Params                                              | Returns                                                                  |
+|-----------------------|--------|------------------------------------------------------------|--------------------------------------------------------------------------|
+| `GET /`               | —      | —                                                          | `{ agent, version }`                                                     |
+| `GET /status`         | —      | —                                                          | `{ agent, version, lastKill?, urlBlocking: { kind, message? } }`         |
+| `POST /sync`          | JSON   | `{ apps: string[], urls: string[], focusActive: boolean }` | `204 No Content`                                                         |
+| `GET /installed-apps` | —      | —                                                          | `{ apps: [{ exe, displayName, running, instances, hasIcon }] }`          |
+| `GET /icon/:exe`      | —      | URL-encoded exe basename                                   | `image/png` (cached 1 day)                                               |
 
 The PWA polls `/status` every 4 s for the connected/disconnected indicator,
 and pushes `/sync` whenever the block list or focus state changes.
@@ -186,19 +188,24 @@ and pushes `/sync` whenever the block list or focus state changes.
   "connection refused" / "you're offline" page. There's no way to show a
   branded "Blocked by Focus Lock" page without either a browser extension or
   running the agent on port 80.
-- **Browser DNS cache**: an open tab may take a few seconds to notice. The
-  agent runs `ipconfig /flushdns` after every change to speed this up; if you
-  still see a stale resolution, close the tab and reopen it.
-- **Whole-domain only**: `youtube.com` cannot be path-blocked
-  (`youtube.com/feed`). The hosts file does not support paths. Path-level
+- **Browser DNS cache on already-open tabs**: when you start a focus session
+  with a tab already open to a blocked site, the browser keeps using its
+  internal DNS cache (~60 s TTL) until expiry, and the tab can still reload.
+  Set `FOCUSLOCK_AGGRESSIVE_RESET=1` in the agent's environment to also kill
+  the browser's network-service process — this wipes that cache instantly.
+  The trade-off is that it also kills Vite's HMR WebSocket, so the PWA's dev
+  server reloads. Use it only with the PWA built in production mode
+  (`npm run build && npm run preview`), not `npm run dev`.
+- **Whole-domain only**: `youtube.com` blocks the whole site, not just
+  `youtube.com/feed`. The hosts file doesn't support paths — path-level
   blocking needs an MV3 browser extension.
 - **Windows only for now**: process enumeration and icon extraction are
   cross-platform via `sysinfo`/`systemicons`, but the Start Menu scan, hosts
-  path, and admin model are Windows-specific. macOS/Linux would need their own
-  implementations.
+  path, browser-network reset, and admin model are Windows-specific.
+  macOS/Linux would need their own implementations.
 
-See [desktop-agent/README.md](desktop-agent/README.md) for protocol details
-and security notes.
+See [desktop-agent/README.md](desktop-agent/README.md) for the full API,
+environment variables, and security notes.
 
 ## Project layout
 
@@ -221,12 +228,13 @@ Focus-Lock/
 │   └── nginx.conf      # Serves the built PWA in the container
 ├── desktop-agent/      # Rust agent (app + URL blocking, Windows)
 │   └── src/
-│       ├── main.rs         # Server + blocker startup, Ctrl+C cleanup
+│       ├── main.rs         # tokio runtime, startup + Ctrl+C cleanup
 │       ├── server.rs       # Axum HTTP API on 127.0.0.1:7777
-│       ├── blocker.rs      # 2 s process-scan loop, URL apply/remove
-│       ├── discovery.rs    # Start Menu + running processes merge
-│       ├── icons.rs        # Exe icon extraction (Windows)
-│       ├── hosts.rs        # Hosts-file read/strip/apply/remove
+│       ├── blocker.rs      # 2 s scan loop, URL + app + connection-reset
+│       ├── discovery.rs    # Start Menu + running-processes merge
+│       ├── icons.rs        # Exe icon extraction (windows / systemicons)
+│       ├── hosts.rs        # Hosts-file read/strip/apply + DNS flush
+│       ├── connections.rs  # Browser TCP kill + network-service reset
 │       └── state.rs        # Shared AppState
 ├── docker-compose.yml
 └── README.md

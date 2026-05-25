@@ -1,4 +1,6 @@
 mod blocker;
+#[cfg(windows)]
+mod connections;
 mod discovery;
 mod hosts;
 mod icons;
