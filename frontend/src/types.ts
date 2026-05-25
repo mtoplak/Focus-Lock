@@ -1,5 +1,7 @@
 export type TimerMode = 'focus' | 'short-break' | 'long-break'
 
+export type BlockKind = 'app' | 'url'
+
 export interface Settings {
   focusMinutes: number
   shortBreakMinutes: number
@@ -14,6 +16,7 @@ export interface Settings {
 export interface BlockedItem {
   id: string
   label: string
+  kind: BlockKind
   enabled: boolean
 }
 
@@ -35,9 +38,11 @@ export const DEFAULT_SETTINGS: Settings = {
 }
 
 export const DEFAULT_BLOCKED: BlockedItem[] = [
-  { id: '1', label: 'youtube.com', enabled: true },
-  { id: '2', label: 'instagram.com', enabled: true },
-  { id: '3', label: 'tiktok.com', enabled: true },
-  { id: '4', label: 'reddit.com', enabled: false },
-  { id: '5', label: 'twitter.com', enabled: false },
+  { id: '1', label: 'youtube.com', kind: 'url', enabled: true },
+  { id: '2', label: 'instagram.com', kind: 'url', enabled: true },
+  { id: '3', label: 'tiktok.com', kind: 'url', enabled: true },
+  { id: '4', label: 'reddit.com', kind: 'url', enabled: false },
+  { id: '5', label: 'twitter.com', kind: 'url', enabled: false },
+  { id: '6', label: 'Spotify.exe', kind: 'app', enabled: false },
+  { id: '7', label: 'Discord.exe', kind: 'app', enabled: false },
 ]

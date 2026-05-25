@@ -1,5 +1,7 @@
-import { useState } from 'react'
-import type { BlockedItem, TimerMode } from '../types'
+import { useMemo, useState } from 'react'
+import type { BlockKind, BlockedItem, TimerMode } from '../types'
+import { useAgent } from '../hooks/useAgent'
+import { AppPicker } from './AppPicker'
 
 interface BlockListProps {
   items: BlockedItem[]
@@ -8,22 +10,62 @@ interface BlockListProps {
   isRunning: boolean
 }
 
+const KIND_LABEL: Record<BlockKind, string> = {
+  url: 'Site',
+  app: 'App',
+}
+
+const KIND_PLACEHOLDER: Record<BlockKind, string> = {
+  url: 'e.g. youtube.com',
+  app: 'e.g. Spotify.exe',
+}
+
 export function BlockList({ items, onChange, mode, isRunning }: BlockListProps) {
   const [draft, setDraft] = useState('')
+  const [draftKind, setDraftKind] = useState<BlockKind>('url')
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const agent = useAgent()
+
+  const blockedAppSet = useMemo(
+    () =>
+      new Set(items.filter((i) => i.kind === 'app').map((i) => i.label.toLowerCase())),
+    [items],
+  )
+
+  const addAppsFromPicker = (exeNames: string[]) => {
+    const existing = new Set(
+      items.filter((i) => i.kind === 'app').map((i) => i.label.toLowerCase()),
+    )
+    const fresh: BlockedItem[] = []
+    for (const exe of exeNames) {
+      if (existing.has(exe.toLowerCase())) continue
+      fresh.push({
+        id: crypto.randomUUID(),
+        label: exe,
+        kind: 'app',
+        enabled: true,
+      })
+      existing.add(exe.toLowerCase())
+    }
+    if (fresh.length > 0) onChange([...items, ...fresh])
+    setPickerOpen(false)
+  }
 
   const activeCount = items.filter((i) => i.enabled).length
+  const activeApps = items.filter((i) => i.enabled && i.kind === 'app').length
   const blockingNow = mode === 'focus' && isRunning && activeCount > 0
 
   const add = () => {
-    const trimmed = draft.trim().toLowerCase()
+    const trimmed = draft.trim()
     if (!trimmed) return
-    if (items.some((i) => i.label === trimmed)) {
+    const normalized = draftKind === 'url' ? trimmed.toLowerCase() : trimmed
+    if (items.some((i) => i.label === normalized && i.kind === draftKind)) {
       setDraft('')
       return
     }
     onChange([
       ...items,
-      { id: crypto.randomUUID(), label: trimmed, enabled: true },
+      { id: crypto.randomUUID(), label: normalized, kind: draftKind, enabled: true },
     ])
     setDraft('')
   }
@@ -35,6 +77,13 @@ export function BlockList({ items, onChange, mode, isRunning }: BlockListProps) 
   const remove = (id: string) => {
     onChange(items.filter((i) => i.id !== id))
   }
+
+  const agentStatusText =
+    agent.status === 'connected'
+      ? `Desktop agent connected${agent.lastKill ? ` — last block: ${agent.lastKill}` : ''}`
+      : agent.status === 'connecting'
+        ? 'Looking for desktop agent…'
+        : 'Desktop agent not running — apps will not be blocked'
 
   return (
     <div className="mx-auto w-full max-w-2xl">
@@ -49,7 +98,7 @@ export function BlockList({ items, onChange, mode, isRunning }: BlockListProps) 
 
       {/* status banner */}
       <div
-        className={`mb-6 flex items-center gap-3 rounded-lg border px-4 py-3 text-[13px] ${
+        className={`mb-3 flex items-center gap-3 rounded-lg border px-4 py-3 text-[13px] ${
           blockingNow
             ? 'border-[color:var(--color-success)]/25 bg-[color:var(--color-success-soft)] text-[color:var(--color-success)]'
             : 'border-[color:var(--color-line)] bg-[color:var(--color-surface)] text-[color:var(--color-ink-muted)]'
@@ -81,31 +130,100 @@ export function BlockList({ items, onChange, mode, isRunning }: BlockListProps) 
         </span>
       </div>
 
+      {/* agent status */}
+      {activeApps > 0 && (
+        <div
+          className={`mb-6 flex items-center gap-2.5 rounded-lg border px-4 py-2.5 text-[12.5px] ${
+            agent.status === 'connected'
+              ? 'border-sky-500/25 bg-sky-500/5 text-sky-700 dark:text-sky-300'
+              : agent.status === 'connecting'
+                ? 'border-[color:var(--color-line)] bg-[color:var(--color-surface)] text-[color:var(--color-ink-muted)]'
+                : 'border-amber-500/30 bg-amber-500/5 text-amber-700 dark:text-amber-300'
+          }`}
+        >
+          <span
+            className={`h-1.5 w-1.5 rounded-full ${
+              agent.status === 'connected'
+                ? 'bg-sky-500'
+                : agent.status === 'connecting'
+                  ? 'bg-[color:var(--color-line-strong)]'
+                  : 'bg-amber-500'
+            }`}
+          />
+          <span className="flex-1">{agentStatusText}</span>
+          {agent.status === 'disconnected' && (
+            <span className="font-mono text-[11px] opacity-70">
+              waiting on 127.0.0.1:7777
+            </span>
+          )}
+        </div>
+      )}
+      {activeApps === 0 && <div className="mb-6" />}
+
       {/* add input */}
       <div className="mb-5 flex gap-2">
-        <div className="relative flex-1">
-          <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[color:var(--color-ink-faint)]">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
-              <circle cx="11" cy="11" r="7" />
-              <path d="M21 21l-4.3-4.3" />
-            </svg>
-          </span>
-          <input
-            type="text"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && add()}
-            placeholder="e.g. youtube.com"
-            className="w-full rounded-lg border border-[color:var(--color-line)] bg-[color:var(--color-surface)] py-2.5 pl-10 pr-3 font-mono text-[13.5px] text-[color:var(--color-ink)] placeholder:font-sans placeholder:text-[color:var(--color-ink-faint)] focus:border-[color:var(--color-accent)]/60 focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/15"
-          />
+        <div className="flex gap-0.5 rounded-lg border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-0.5">
+          {(['url', 'app'] as BlockKind[]).map((k) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => setDraftKind(k)}
+              className={`rounded-md px-3 py-2 text-[12.5px] font-medium transition ${
+                draftKind === k
+                  ? 'bg-[color:var(--color-ink)] text-white'
+                  : 'text-[color:var(--color-ink-muted)] hover:text-[color:var(--color-ink)]'
+              }`}
+            >
+              {KIND_LABEL[k]}
+            </button>
+          ))}
         </div>
-        <button
-          type="button"
-          onClick={add}
-          className="rounded-lg bg-[color:var(--color-ink)] px-5 text-[13px] font-medium text-white transition hover:bg-[color:var(--color-ink-soft)] active:scale-[0.98]"
-        >
-          Add
-        </button>
+
+        {draftKind === 'url' ? (
+          <>
+            <div className="relative flex-1">
+              <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[color:var(--color-ink-faint)]">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="M21 21l-4.3-4.3" />
+                </svg>
+              </span>
+              <input
+                type="text"
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && add()}
+                placeholder={KIND_PLACEHOLDER[draftKind]}
+                className="w-full rounded-lg border border-[color:var(--color-line)] bg-[color:var(--color-surface)] py-2.5 pl-10 pr-3 font-mono text-[13.5px] text-[color:var(--color-ink)] placeholder:font-sans placeholder:text-[color:var(--color-ink-faint)] focus:border-[color:var(--color-accent)]/60 focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/15"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={add}
+              className="rounded-lg bg-[color:var(--color-ink)] px-5 text-[13px] font-medium text-white transition hover:bg-[color:var(--color-ink-soft)] active:scale-[0.98]"
+            >
+              Add
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setPickerOpen(true)}
+            disabled={agent.status !== 'connected'}
+            className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-dashed border-[color:var(--color-line-strong)] bg-[color:var(--color-surface)] px-4 py-2.5 text-[13px] font-medium text-[color:var(--color-ink-muted)] transition hover:border-[color:var(--color-accent)]/40 hover:bg-[color:var(--color-surface-2)] hover:text-[color:var(--color-ink)] disabled:cursor-not-allowed disabled:opacity-50"
+            title={agent.status !== 'connected' ? 'Desktop agent not running' : undefined}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="7" height="7" rx="1.5" />
+              <rect x="14" y="3" width="7" height="7" rx="1.5" />
+              <rect x="3" y="14" width="7" height="7" rx="1.5" />
+              <path d="M14 17.5h7M17.5 14v7" />
+            </svg>
+            {agent.status === 'connected'
+              ? 'Pick from your installed apps'
+              : 'Start the desktop agent to pick apps'}
+          </button>
+        )}
       </div>
 
       {/* list */}
@@ -143,6 +261,15 @@ export function BlockList({ items, onChange, mode, isRunning }: BlockListProps) 
               />
             </button>
             <span
+              className={`shrink-0 rounded-md border px-1.5 py-0.5 text-[9.5px] font-semibold uppercase tracking-wider ${
+                item.kind === 'app'
+                  ? 'border-violet-500/30 bg-violet-500/5 text-violet-600 dark:text-violet-300'
+                  : 'border-sky-500/30 bg-sky-500/5 text-sky-600 dark:text-sky-300'
+              }`}
+            >
+              {item.kind === 'app' ? 'APP' : 'URL'}
+            </span>
+            <span
               className={`flex-1 truncate font-mono text-[13.5px] tracking-tight transition ${
                 item.enabled
                   ? 'text-[color:var(--color-ink)]'
@@ -164,6 +291,14 @@ export function BlockList({ items, onChange, mode, isRunning }: BlockListProps) 
           </li>
         ))}
       </ul>
+
+      {pickerOpen && (
+        <AppPicker
+          alreadyBlocked={blockedAppSet}
+          onCancel={() => setPickerOpen(false)}
+          onConfirm={addAppsFromPicker}
+        />
+      )}
     </div>
   )
 }

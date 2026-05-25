@@ -1,5 +1,7 @@
-import { useCallback, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useLocalStorage } from '../hooks/useLocalStorage'
+import { useAgentSync } from '../hooks/useAgent'
 import { useTimer } from '../hooks/useTimer'
 import { Timer } from '../components/Timer'
 import { BlockList } from '../components/BlockList'
@@ -10,6 +12,20 @@ import type { BlockedItem, SessionRecord, Settings } from '../types'
 import { DEFAULT_BLOCKED, DEFAULT_SETTINGS } from '../types'
 
 type View = 'timer' | 'block' | 'stats' | 'settings'
+
+const VIEW_TO_PATH: Record<View, string> = {
+  timer: '/',
+  block: '/blocks',
+  stats: '/stats',
+  settings: '/settings',
+}
+
+const PATH_TO_VIEW: Record<string, View> = {
+  '/': 'timer',
+  '/blocks': 'block',
+  '/stats': 'stats',
+  '/settings': 'settings',
+}
 
 const NAV: { id: View; label: string; icon: ReactNode }[] = [
   {
@@ -56,7 +72,10 @@ const NAV: { id: View; label: string; icon: ReactNode }[] = [
 const todayISO = () => new Date().toISOString().slice(0, 10)
 
 export function HomePage() {
-  const [view, setView] = useState<View>('timer')
+  const location = useLocation()
+  const navigate = useNavigate()
+  const view: View = PATH_TO_VIEW[location.pathname] ?? 'timer'
+  const setView = (next: View) => navigate(VIEW_TO_PATH[next])
   const [task, setTask] = useState('')
   const [settings, setSettings] = useLocalStorage<Settings>('fl.settings', DEFAULT_SETTINGS)
   const [blocked, setBlocked] = useLocalStorage<BlockedItem[]>('fl.blocked', DEFAULT_BLOCKED)
@@ -85,6 +104,16 @@ export function HomePage() {
   )
 
   const timer = useTimer(settings, recordFocus)
+
+  // Backfill `kind` on items saved before this field existed.
+  useEffect(() => {
+    const legacy = blocked as Array<Partial<BlockedItem> & { id: string; label: string; enabled: boolean }>
+    if (legacy.some((b) => !b.kind)) {
+      setBlocked(legacy.map((b) => ({ ...b, kind: b.kind ?? 'url' }) as BlockedItem))
+    }
+  }, [blocked, setBlocked])
+
+  useAgentSync(blocked, timer.mode === 'focus' && timer.isRunning)
 
   return (
     <div className="flex min-h-dvh bg-[color:var(--color-canvas)] text-[color:var(--color-ink)] md:h-dvh md:min-h-0 md:overflow-hidden">
