@@ -1,6 +1,8 @@
 import type { Settings } from '../types'
 import { DEFAULT_SETTINGS } from '../types'
 import { ensureNotificationPermission, notificationsSupported } from '../lib/notify'
+import { voiceControlSupported } from '../lib/voice/speechSupport'
+import { VoiceCommandList } from './VoiceCommandList'
 
 interface SettingsViewProps {
   settings: Settings
@@ -13,6 +15,7 @@ export function SettingsView({ settings, onChange }: SettingsViewProps) {
   }
 
   const supportsNotifications = notificationsSupported()
+  const supportsVoice = voiceControlSupported()
   const notificationsBlocked =
     supportsNotifications && typeof Notification !== 'undefined' && Notification.permission === 'denied'
 
@@ -104,6 +107,17 @@ export function SettingsView({ settings, onChange }: SettingsViewProps) {
             onChange={(v) => update('soundEnabled', v)}
           />
           <ToggleRow
+            label="Voice control"
+            description={
+              supportsVoice
+                ? 'Push-to-talk from the sidebar or top bar — timer, navigation, and modes.'
+                : 'Not supported in this browser (use Chrome or Edge).'
+            }
+            checked={settings.voiceControlEnabled && supportsVoice}
+            disabled={!supportsVoice}
+            onChange={(v) => update('voiceControlEnabled', v)}
+          />
+          <ToggleRow
             label="Notifications"
             description={
               !supportsNotifications
@@ -120,6 +134,20 @@ export function SettingsView({ settings, onChange }: SettingsViewProps) {
           />
         </div>
       </section>
+
+      {supportsVoice && (
+        <section className="mb-6 rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-6">
+          <h3 className="text-[15px] font-semibold tracking-tight text-[color:var(--color-ink)]">
+            Voice commands
+          </h3>
+          <p className="mt-1 mb-4 text-[12.5px] text-[color:var(--color-ink-muted)]">
+            {settings.voiceControlEnabled
+              ? 'Reference for phrases the app recognizes.'
+              : 'Enable voice control above to use these commands.'}
+          </p>
+          <VoiceCommandList />
+        </section>
+      )}
 
       <div className="flex items-center justify-between">
         <p className="text-[12.5px] text-[color:var(--color-ink-faint)]">

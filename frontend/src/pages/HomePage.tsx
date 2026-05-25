@@ -3,6 +3,8 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { useLocalStorage } from '../hooks/useLocalStorage'
 import { useAgentSync } from '../hooks/useAgent'
 import { useTimer } from '../hooks/useTimer'
+import { useVoiceControl } from '../hooks/useVoiceControl'
+import { VoiceControl } from '../components/VoiceControl'
 import { Timer } from '../components/Timer'
 import { BlockList } from '../components/BlockList'
 import { Stats } from '../components/Stats'
@@ -105,6 +107,24 @@ export function HomePage() {
 
   const timer = useTimer(settings, recordFocus)
 
+  const voice = useVoiceControl(settings.voiceControlEnabled, {
+    onStart: () => {
+      if (!timer.isRunning) timer.start()
+    },
+    onPause: timer.pause,
+    onReset: timer.reset,
+    onSkip: timer.skip,
+    onSetMode: timer.setMode,
+    onNavigate: setView,
+  })
+
+  // Backfill settings fields added after earlier saves.
+  useEffect(() => {
+    if (settings.voiceControlEnabled === undefined) {
+      setSettings({ ...settings, voiceControlEnabled: false })
+    }
+  }, [settings, setSettings])
+
   // Backfill `kind` on items saved before this field existed.
   useEffect(() => {
     const legacy = blocked as Array<Partial<BlockedItem> & { id: string; label: string; enabled: boolean }>
@@ -152,6 +172,7 @@ export function HomePage() {
             )
           })}
         </nav>
+        {voice.enabled && <VoiceControl voice={voice} placement="sidebar" />}
       </aside>
 
       <div className="fixed inset-x-0 top-0 z-20 flex items-center justify-between gap-2 border-b border-[color:var(--color-line)] bg-[color:var(--color-canvas)]/90 px-4 py-3 backdrop-blur-md md:hidden">
@@ -164,7 +185,8 @@ export function HomePage() {
           </div>
           <span className="truncate text-[14px] font-semibold tracking-tight">Focus Lock</span>
         </div>
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="flex shrink-0 items-center gap-1.5">
+          {voice.enabled && <VoiceControl voice={voice} placement="toolbar" />}
           <nav className="flex gap-0.5">
             {NAV.map((item) => (
               <button
