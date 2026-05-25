@@ -1,6 +1,6 @@
 use crate::discovery;
 use crate::icons;
-use crate::state::AppState;
+use crate::state::{AppState, UrlBlockStatus};
 use axum::{
     extract::{Path as AxPath, State},
     http::{header, Method, StatusCode},
@@ -21,11 +21,16 @@ struct StatusResponse {
     version: &'static str,
     #[serde(skip_serializing_if = "Option::is_none", rename = "lastKill")]
     last_kill: Option<String>,
+    #[serde(rename = "urlBlocking")]
+    url_blocking: UrlBlockStatus,
 }
 
 #[derive(Deserialize)]
 struct SyncRequest {
+    #[serde(default)]
     apps: Vec<String>,
+    #[serde(default)]
+    urls: Vec<String>,
     #[serde(rename = "focusActive")]
     focus_active: bool,
 }
@@ -38,11 +43,12 @@ async fn root() -> impl IntoResponse {
 }
 
 async fn status(State(state): State<AppState>) -> impl IntoResponse {
-    let (_, _, last_kill) = state.snapshot();
+    let snap = state.snapshot();
     Json(StatusResponse {
         agent: "focuslock",
         version: VERSION,
-        last_kill,
+        last_kill: snap.last_kill,
+        url_blocking: snap.url_status,
     })
 }
 
@@ -50,7 +56,7 @@ async fn sync(
     State(state): State<AppState>,
     Json(body): Json<SyncRequest>,
 ) -> impl IntoResponse {
-    state.update_sync(body.apps, body.focus_active);
+    state.update_sync(body.apps, body.urls, body.focus_active);
     StatusCode::NO_CONTENT
 }
 

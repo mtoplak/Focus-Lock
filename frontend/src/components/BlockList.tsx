@@ -53,7 +53,9 @@ export function BlockList({ items, onChange, mode, isRunning }: BlockListProps) 
 
   const activeCount = items.filter((i) => i.enabled).length
   const activeApps = items.filter((i) => i.enabled && i.kind === 'app').length
+  const activeUrls = items.filter((i) => i.enabled && i.kind === 'url').length
   const blockingNow = mode === 'focus' && isRunning && activeCount > 0
+  const urlNeedsAdmin = agent.urlBlocking?.kind === 'needs-admin' && activeUrls > 0
 
   const add = () => {
     const trimmed = draft.trim()
@@ -117,9 +119,10 @@ export function BlockList({ items, onChange, mode, isRunning }: BlockListProps) 
         <span className="flex-1">
           {blockingNow ? (
             <>
-              Blocking active —{' '}
-              <span className="font-medium">{activeCount}</span>{' '}
-              {activeCount === 1 ? 'distraction' : 'distractions'}
+              Blocking active — <span className="font-medium">{activeUrls}</span>{' '}
+              {activeUrls === 1 ? 'site' : 'sites'},{' '}
+              <span className="font-medium">{activeApps}</span>{' '}
+              {activeApps === 1 ? 'app' : 'apps'}
             </>
           ) : (
             'Blocking activates during focus sessions'
@@ -129,6 +132,24 @@ export function BlockList({ items, onChange, mode, isRunning }: BlockListProps) 
           {activeCount}/{items.length}
         </span>
       </div>
+
+      {/* URL blocking status: only show when relevant */}
+      {urlNeedsAdmin && (
+        <div className="mb-3 flex items-start gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-[12.5px] text-amber-700 dark:text-amber-300">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 shrink-0">
+            <path d="M12 9v4M12 17h.01M10.3 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+          </svg>
+          <div className="flex-1">
+            <p className="font-medium">URL blocking needs admin</p>
+            <p className="mt-0.5 text-[12px] opacity-80">
+              The hosts file requires elevation. Stop the agent and relaunch the terminal as administrator
+              (right-click PowerShell → "Run as administrator"), then{' '}
+              <code className="rounded bg-amber-500/10 px-1 py-0.5 font-mono text-[11px]">cargo run</code> again.
+              App blocking continues to work as-is.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* agent status */}
       {activeApps > 0 && (

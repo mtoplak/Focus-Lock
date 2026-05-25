@@ -24,10 +24,18 @@ export async function fetchInstalledApps(): Promise<InstalledApp[]> {
 
 export type AgentStatus = 'connecting' | 'connected' | 'disconnected'
 
+export type UrlBlockKind = 'idle' | 'active' | 'needs-admin' | 'error'
+
+export interface UrlBlockState {
+  kind: UrlBlockKind
+  message?: string
+}
+
 interface AgentState {
   status: AgentStatus
   version?: string
   lastKill?: string
+  urlBlocking?: UrlBlockState
 }
 
 let cachedState: AgentState = { status: 'connecting' }
@@ -49,8 +57,17 @@ const startPolling = () => {
     try {
       const res = await fetch(`${AGENT_URL}/status`, { method: 'GET' })
       if (!res.ok) throw new Error(`status ${res.status}`)
-      const body = (await res.json()) as { version?: string; lastKill?: string }
-      setState({ status: 'connected', version: body.version, lastKill: body.lastKill })
+      const body = (await res.json()) as {
+        version?: string
+        lastKill?: string
+        urlBlocking?: { kind: string; message?: string }
+      }
+      setState({
+        status: 'connected',
+        version: body.version,
+        lastKill: body.lastKill,
+        urlBlocking: body.urlBlocking as UrlBlockState | undefined,
+      })
     } catch {
       setState({ status: 'disconnected' })
     }
@@ -94,8 +111,11 @@ export function useAgentSync(items: BlockedItem[], focusActive: boolean) {
     const apps = items
       .filter((i) => i.enabled && i.kind === 'app')
       .map((i) => i.label)
+    const urls = items
+      .filter((i) => i.enabled && i.kind === 'url')
+      .map((i) => i.label)
 
-    const payload = JSON.stringify({ apps, focusActive })
+    const payload = JSON.stringify({ apps, urls, focusActive })
     if (payload === lastPayloadRef.current) return
     lastPayloadRef.current = payload
 

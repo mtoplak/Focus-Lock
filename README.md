@@ -1,10 +1,14 @@
 # Focus-Lock
 
-Monorepo with a React PWA frontend and Express API backend, backed by PostgreSQL.
+Monorepo with a React PWA frontend, Express API backend, PostgreSQL, and a
+native Rust agent that handles desktop-app and URL blocking on the user's
+machine.
 
 - **Frontend** — Vite 6 + React 19 + Tailwind CSS 4 + `vite-plugin-pwa`
 - **Backend** — Node + Express 4 + TypeScript 5.7 (ESM)
 - **Database** — PostgreSQL 16, with Adminer for browsing
+- **Desktop agent** — Rust + Axum + sysinfo + `lnk` (Windows only for now);
+  see [desktop-agent/](desktop-agent/README.md)
 
 ## Prerequisites
 
@@ -125,6 +129,77 @@ docker compose up db adminer
 
 …or point `DATABASE_URL` at any reachable Postgres 16 instance.
 
+## Desktop agent (app + URL blocking)
+
+The web app on its own can't block desktop programs or URLs across the
+browser — those need OS-level access. The agent in [desktop-agent/](desktop-agent/)
+is a small Rust binary that runs locally on Windows, exposes an HTTP server on
+`127.0.0.1:7777`, and is driven by the PWA over `localhost`.
+
+| Capability               | Mechanism                                            | Admin required? |
+|--------------------------|------------------------------------------------------|-----------------|
+| Desktop app blocking     | Polls processes every 2 s, kills matches            | No              |
+| URL blocking             | Rewrites `C:\Windows\System32\drivers\etc\hosts`    | Yes             |
+| Detect installed apps    | Scans Start Menu shortcuts + running processes      | No              |
+| Show app icons in picker | `systemicons` extracts the exe's icon as PNG         | No              |
+
+### Run the agent
+
+Prerequisite: **Rust toolchain** — install via [rustup.rs](https://rustup.rs/)
+(pick the default install; restart your shell so PATH picks up `cargo`).
+
+```powershell
+# For app blocking only (no admin needed):
+cd desktop-agent
+cargo run
+
+# For URL blocking too: open PowerShell as Administrator
+# (Win key → type "powershell" → right-click → "Run as administrator"), then:
+cd desktop-agent
+cargo run
+```
+
+The first build takes 1–3 minutes (compiles dependencies); incremental builds
+are seconds. The agent prints to stdout — keep the terminal open. `Ctrl+C` to
+stop. The agent removes its hosts-file entries on shutdown.
+
+For a release binary: `cargo build --release` produces
+`desktop-agent/target/release/focuslock-agent.exe` (~3–4 MB).
+
+### How the PWA talks to it
+
+| Endpoint            | Method | Purpose                                          |
+|---------------------|--------|--------------------------------------------------|
+| `GET /`             | —      | Liveness check                                   |
+| `GET /status`       | —      | Current state, last-killed app, URL block status |
+| `POST /sync`        | JSON   | Push block list + focus state                    |
+| `GET /installed-apps` | —    | Discover apps from Start Menu + running procs    |
+| `GET /icon/:exe`    | —      | PNG icon for an exe (cached for 1 day)           |
+
+The PWA polls `/status` every 4 s for the connected/disconnected indicator,
+and pushes `/sync` whenever the block list or focus state changes.
+
+### Caveats
+
+- **Block page looks like an error page**: hosts-file blocking redirects
+  domains to `127.0.0.1` and the browser shows its standard
+  "connection refused" / "you're offline" page. There's no way to show a
+  branded "Blocked by Focus Lock" page without either a browser extension or
+  running the agent on port 80.
+- **Browser DNS cache**: an open tab may take a few seconds to notice. The
+  agent runs `ipconfig /flushdns` after every change to speed this up; if you
+  still see a stale resolution, close the tab and reopen it.
+- **Whole-domain only**: `youtube.com` cannot be path-blocked
+  (`youtube.com/feed`). The hosts file does not support paths. Path-level
+  blocking needs an MV3 browser extension.
+- **Windows only for now**: process enumeration and icon extraction are
+  cross-platform via `sysinfo`/`systemicons`, but the Start Menu scan, hosts
+  path, and admin model are Windows-specific. macOS/Linux would need their own
+  implementations.
+
+See [desktop-agent/README.md](desktop-agent/README.md) for protocol details
+and security notes.
+
 ## Project layout
 
 ```
@@ -144,6 +219,15 @@ Focus-Lock/
 │   │   └── index.css
 │   ├── Dockerfile
 │   └── nginx.conf      # Serves the built PWA in the container
+├── desktop-agent/      # Rust agent (app + URL blocking, Windows)
+│   └── src/
+│       ├── main.rs         # Server + blocker startup, Ctrl+C cleanup
+│       ├── server.rs       # Axum HTTP API on 127.0.0.1:7777
+│       ├── blocker.rs      # 2 s process-scan loop, URL apply/remove
+│       ├── discovery.rs    # Start Menu + running processes merge
+│       ├── icons.rs        # Exe icon extraction (Windows)
+│       ├── hosts.rs        # Hosts-file read/strip/apply/remove
+│       └── state.rs        # Shared AppState
 ├── docker-compose.yml
 └── README.md
 ```

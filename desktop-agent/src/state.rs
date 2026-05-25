@@ -1,19 +1,32 @@
 use parking_lot::Mutex;
+use serde::Serialize;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::Arc;
 
+#[derive(Clone, Debug, Default, Serialize, PartialEq, Eq)]
+#[serde(tag = "kind", rename_all = "kebab-case")]
+pub enum UrlBlockStatus {
+    /// Not currently blocking anything.
+    #[default]
+    Idle,
+    /// Successfully blocking the configured domains.
+    Active,
+    /// Hosts file write failed because the agent isn't running as admin.
+    NeedsAdmin,
+    /// Some other IO error happened.
+    Error { message: String },
+}
+
 #[derive(Default)]
 pub struct InnerState {
     pub blocked_apps: HashSet<String>,
+    pub blocked_urls: HashSet<String>,
     pub focus_active: bool,
     pub last_kill: Option<String>,
-    /// Maps lowercased exe name → resolved absolute path on disk. Populated
-    /// each time `/installed-apps` runs so `/icon/:exe` can find the file.
     pub exe_paths: HashMap<String, PathBuf>,
-    /// Maps lowercased exe name → cached PNG bytes for its icon. Filled
-    /// lazily by the icon endpoint so first request pays the cost.
     pub icon_cache: HashMap<String, Vec<u8>>,
+    pub url_status: UrlBlockStatus,
 }
 
 #[derive(Clone, Default)]
@@ -26,20 +39,32 @@ impl AppState {
         Self::default()
     }
 
-    pub fn snapshot(&self) -> (HashSet<String>, bool, Option<String>) {
+    pub fn snapshot(&self) -> Snapshot {
         let g = self.inner.lock();
-        (g.blocked_apps.clone(), g.focus_active, g.last_kill.clone())
+        Snapshot {
+            blocked_apps: g.blocked_apps.clone(),
+            blocked_urls: g.blocked_urls.clone(),
+            focus_active: g.focus_active,
+            last_kill: g.last_kill.clone(),
+            url_status: g.url_status.clone(),
+        }
     }
 
-    pub fn update_sync(&self, apps: Vec<String>, focus_active: bool) {
+    pub fn update_sync(&self, apps: Vec<String>, urls: Vec<String>, focus_active: bool) {
         let mut g = self.inner.lock();
         g.blocked_apps = apps.into_iter().map(normalize_name).collect();
+        g.blocked_urls = urls.into_iter().map(|s| s.trim().to_ascii_lowercase()).collect();
         g.focus_active = focus_active;
     }
 
     pub fn record_kill(&self, name: &str) {
         let mut g = self.inner.lock();
         g.last_kill = Some(name.to_string());
+    }
+
+    pub fn set_url_status(&self, status: UrlBlockStatus) {
+        let mut g = self.inner.lock();
+        g.url_status = status;
     }
 
     pub fn set_exe_paths(&self, paths: HashMap<String, PathBuf>) {
@@ -61,6 +86,14 @@ impl AppState {
         let mut g = self.inner.lock();
         g.icon_cache.insert(exe.to_ascii_lowercase(), bytes);
     }
+}
+
+pub struct Snapshot {
+    pub blocked_apps: HashSet<String>,
+    pub blocked_urls: HashSet<String>,
+    pub focus_active: bool,
+    pub last_kill: Option<String>,
+    pub url_status: UrlBlockStatus,
 }
 
 pub fn normalize_name(s: String) -> String {
