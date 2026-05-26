@@ -4,7 +4,9 @@ import { useLocalStorage } from '../hooks/useLocalStorage'
 import { useAgentSync } from '../hooks/useAgent'
 import { useTimer } from '../hooks/useTimer'
 import { useVoiceControl } from '../hooks/useVoiceControl'
+import { useAmbient } from '../hooks/useAmbient'
 import { VoiceControl } from '../components/VoiceControl'
+import { AmbientPlayer } from '../components/AmbientPlayer'
 import { Timer } from '../components/Timer'
 import { BlockList } from '../components/BlockList'
 import { Stats } from '../components/Stats'
@@ -106,6 +108,7 @@ export function HomePage() {
   )
 
   const timer = useTimer(settings, recordFocus)
+  const ambient = useAmbient()
 
   const isStrictLocked = settings.strictMode && timer.mode === 'focus' && timer.isRunning
 
@@ -187,6 +190,7 @@ export function HomePage() {
           })}
         </nav>
         {voice.enabled && <VoiceControl voice={voice} placement="sidebar" />}
+        <AmbientPlayer ambient={ambient} />
       </aside>
 
       <div className="fixed inset-x-0 top-0 z-20 flex items-center justify-between gap-2 border-b border-[color:var(--color-line)] bg-[color:var(--color-canvas)]/90 px-4 py-3 backdrop-blur-md md:hidden">
