@@ -107,21 +107,35 @@ export function HomePage() {
 
   const timer = useTimer(settings, recordFocus)
 
+  const isStrictLocked = settings.strictMode && timer.mode === 'focus' && timer.isRunning
+
   const voice = useVoiceControl(settings.voiceControlEnabled, {
     onStart: () => {
       if (!timer.isRunning) timer.start()
     },
-    onPause: timer.pause,
-    onReset: timer.reset,
-    onSkip: timer.skip,
-    onSetMode: timer.setMode,
+    onPause: () => {
+      if (!isStrictLocked) timer.pause()
+    },
+    onReset: () => {
+      if (!isStrictLocked) timer.reset()
+    },
+    onSkip: () => {
+      if (!isStrictLocked) timer.skip()
+    },
+    onSetMode: (m) => {
+      if (!isStrictLocked) timer.setMode(m)
+    },
     onNavigate: setView,
   })
 
   // Backfill settings fields added after earlier saves.
   useEffect(() => {
-    if (settings.voiceControlEnabled === undefined) {
-      setSettings({ ...settings, voiceControlEnabled: false })
+    if (settings.voiceControlEnabled === undefined || settings.strictMode === undefined) {
+      setSettings({
+        ...settings,
+        voiceControlEnabled: settings.voiceControlEnabled ?? false,
+        strictMode: settings.strictMode ?? false,
+      })
     }
   }, [settings, setSettings])
 
@@ -221,9 +235,31 @@ export function HomePage() {
           </div>
         </div>
 
+        {isStrictLocked && (
+          <div className="mx-auto mb-6 flex max-w-2xl items-start gap-3 rounded-xl border border-rose-500/25 bg-rose-500/5 px-4 py-3 text-[13px] text-rose-700 dark:text-rose-300">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 shrink-0">
+              <rect x="5" y="11" width="14" height="10" rx="2" />
+              <path d="M8 11V7a4 4 0 1 1 8 0v4" />
+            </svg>
+            <div className="flex-1">
+              <p className="font-medium">Strict mode locked</p>
+              <p className="mt-0.5 text-[12px] opacity-80">
+                You enabled strict mode, so this focus session can't be paused, reset, skipped, or edited until it ends.
+                Block list and settings are read-only.
+              </p>
+            </div>
+          </div>
+        )}
+
         {view === 'timer' && (
           <div className="flex w-full items-start justify-center md:h-full md:items-center">
-            <Timer timer={timer} settings={settings} task={task} onTaskChange={setTask} />
+            <Timer
+              timer={timer}
+              settings={settings}
+              task={task}
+              onTaskChange={setTask}
+              strictLocked={isStrictLocked}
+            />
           </div>
         )}
         {view === 'block' && (
@@ -232,10 +268,13 @@ export function HomePage() {
             onChange={setBlocked}
             mode={timer.mode}
             isRunning={timer.isRunning}
+            strictLocked={isStrictLocked}
           />
         )}
         {view === 'stats' && <Stats history={history} />}
-        {view === 'settings' && <SettingsView settings={settings} onChange={setSettings} />}
+        {view === 'settings' && (
+          <SettingsView settings={settings} onChange={setSettings} strictLocked={isStrictLocked} />
+        )}
       </main>
     </div>
   )

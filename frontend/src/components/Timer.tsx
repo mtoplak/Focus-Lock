@@ -6,6 +6,7 @@ interface TimerProps {
   settings: Settings
   task: string
   onTaskChange: (task: string) => void
+  strictLocked?: boolean
 }
 
 const MODE_LABELS: Record<TimerMode, string> = {
@@ -26,7 +27,7 @@ const formatTime = (totalSeconds: number) => {
   return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
 }
 
-export function Timer({ timer, settings, task, onTaskChange }: TimerProps) {
+export function Timer({ timer, settings, task, onTaskChange, strictLocked = false }: TimerProps) {
   const { mode, setMode, secondsLeft, totalSeconds, isRunning, start, pause, reset, skip, completedFocusSessions } =
     timer
 
@@ -57,11 +58,13 @@ export function Timer({ timer, settings, task, onTaskChange }: TimerProps) {
               key={m}
               type="button"
               onClick={() => setMode(m)}
+              disabled={strictLocked}
+              title={strictLocked ? 'Locked by strict mode' : undefined}
               className={`rounded-full px-4 py-1.5 text-[13px] font-medium transition ${
                 active
                   ? 'bg-[color:var(--color-ink)] text-white'
                   : 'text-[color:var(--color-ink-muted)] hover:text-[color:var(--color-ink)]'
-              }`}
+              } disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-[color:var(--color-ink-muted)]`}
             >
               {MODE_LABELS[m]}
             </button>
@@ -120,9 +123,10 @@ export function Timer({ timer, settings, task, onTaskChange }: TimerProps) {
         <button
           type="button"
           onClick={reset}
-          className="flex h-10 w-10 items-center justify-center rounded-full border border-[color:var(--color-line)] bg-[color:var(--color-surface)] text-[color:var(--color-ink-muted)] transition hover:border-[color:var(--color-line-strong)] hover:text-[color:var(--color-ink)]"
+          disabled={strictLocked}
+          className="flex h-10 w-10 items-center justify-center rounded-full border border-[color:var(--color-line)] bg-[color:var(--color-surface)] text-[color:var(--color-ink-muted)] transition hover:border-[color:var(--color-line-strong)] hover:text-[color:var(--color-ink)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-[color:var(--color-line)] disabled:hover:text-[color:var(--color-ink-muted)]"
           aria-label="Reset"
-          title="Reset"
+          title={strictLocked ? 'Locked by strict mode' : 'Reset'}
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <path d="M3 12a9 9 0 1 0 3-6.7" />
@@ -132,7 +136,9 @@ export function Timer({ timer, settings, task, onTaskChange }: TimerProps) {
         <button
           type="button"
           onClick={isRunning ? pause : start}
-          className="inline-flex items-center gap-2 rounded-full bg-[color:var(--color-ink)] px-9 py-2.5 text-[14px] font-medium text-white shadow-[0_1px_2px_rgba(0,0,0,0.1)] transition hover:bg-[color:var(--color-ink-soft)] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--color-canvas)]"
+          disabled={isRunning && strictLocked}
+          title={isRunning && strictLocked ? 'Locked by strict mode' : undefined}
+          className="inline-flex items-center gap-2 rounded-full bg-[color:var(--color-ink)] px-9 py-2.5 text-[14px] font-medium text-white shadow-[0_1px_2px_rgba(0,0,0,0.1)] transition hover:bg-[color:var(--color-ink-soft)] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--color-canvas)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[color:var(--color-ink)]"
         >
           {isRunning ? (
             <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
@@ -149,9 +155,10 @@ export function Timer({ timer, settings, task, onTaskChange }: TimerProps) {
         <button
           type="button"
           onClick={skip}
-          className="flex h-10 w-10 items-center justify-center rounded-full border border-[color:var(--color-line)] bg-[color:var(--color-surface)] text-[color:var(--color-ink-muted)] transition hover:border-[color:var(--color-line-strong)] hover:text-[color:var(--color-ink)]"
+          disabled={strictLocked}
+          className="flex h-10 w-10 items-center justify-center rounded-full border border-[color:var(--color-line)] bg-[color:var(--color-surface)] text-[color:var(--color-ink-muted)] transition hover:border-[color:var(--color-line-strong)] hover:text-[color:var(--color-ink)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-[color:var(--color-line)] disabled:hover:text-[color:var(--color-ink-muted)]"
           aria-label="Skip"
-          title="Skip"
+          title={strictLocked ? 'Locked by strict mode' : 'Skip'}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
             <path d="M5 5v14l9-7-9-7z" />

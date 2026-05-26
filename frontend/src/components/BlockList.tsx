@@ -8,6 +8,7 @@ interface BlockListProps {
   onChange: (items: BlockedItem[]) => void
   mode: TimerMode
   isRunning: boolean
+  strictLocked?: boolean
 }
 
 const KIND_LABEL: Record<BlockKind, string> = {
@@ -20,7 +21,7 @@ const KIND_PLACEHOLDER: Record<BlockKind, string> = {
   app: 'e.g. Spotify.exe',
 }
 
-export function BlockList({ items, onChange, mode, isRunning }: BlockListProps) {
+export function BlockList({ items, onChange, mode, isRunning, strictLocked = false }: BlockListProps) {
   const [draft, setDraft] = useState('')
   const [draftKind, setDraftKind] = useState<BlockKind>('url')
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -182,14 +183,18 @@ export function BlockList({ items, onChange, mode, isRunning }: BlockListProps) 
       {activeApps === 0 && <div className="mb-6" />}
 
       {/* add input */}
-      <div className="mb-5 flex gap-2">
+      <fieldset
+        disabled={strictLocked}
+        className="mb-5 flex gap-2 disabled:opacity-50"
+        title={strictLocked ? 'Locked by strict mode' : undefined}
+      >
         <div className="flex gap-0.5 rounded-lg border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-0.5">
           {(['url', 'app'] as BlockKind[]).map((k) => (
             <button
               key={k}
               type="button"
               onClick={() => setDraftKind(k)}
-              className={`rounded-md px-3 py-2 text-[12.5px] font-medium transition ${
+              className={`rounded-md px-3 py-2 text-[12.5px] font-medium transition disabled:cursor-not-allowed ${
                 draftKind === k
                   ? 'bg-[color:var(--color-ink)] text-white'
                   : 'text-[color:var(--color-ink-muted)] hover:text-[color:var(--color-ink)]'
@@ -215,13 +220,13 @@ export function BlockList({ items, onChange, mode, isRunning }: BlockListProps) 
                 onChange={(e) => setDraft(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && add()}
                 placeholder={KIND_PLACEHOLDER[draftKind]}
-                className="w-full rounded-lg border border-[color:var(--color-line)] bg-[color:var(--color-surface)] py-2.5 pl-10 pr-3 font-mono text-[13.5px] text-[color:var(--color-ink)] placeholder:font-sans placeholder:text-[color:var(--color-ink-faint)] focus:border-[color:var(--color-accent)]/60 focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/15"
+                className="w-full rounded-lg border border-[color:var(--color-line)] bg-[color:var(--color-surface)] py-2.5 pl-10 pr-3 font-mono text-[13.5px] text-[color:var(--color-ink)] placeholder:font-sans placeholder:text-[color:var(--color-ink-faint)] focus:border-[color:var(--color-accent)]/60 focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/15 disabled:cursor-not-allowed"
               />
             </div>
             <button
               type="button"
               onClick={add}
-              className="rounded-lg bg-[color:var(--color-ink)] px-5 text-[13px] font-medium text-white transition hover:bg-[color:var(--color-ink-soft)] active:scale-[0.98]"
+              className="rounded-lg bg-[color:var(--color-ink)] px-5 text-[13px] font-medium text-white transition hover:bg-[color:var(--color-ink-soft)] active:scale-[0.98] disabled:cursor-not-allowed"
             >
               Add
             </button>
@@ -245,7 +250,7 @@ export function BlockList({ items, onChange, mode, isRunning }: BlockListProps) 
               : 'Start the desktop agent to pick apps'}
           </button>
         )}
-      </div>
+      </fieldset>
 
       {/* list */}
       <ul className="overflow-hidden rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)]">
@@ -269,11 +274,13 @@ export function BlockList({ items, onChange, mode, isRunning }: BlockListProps) 
               role="switch"
               aria-checked={item.enabled}
               onClick={() => toggle(item.id)}
+              disabled={strictLocked}
+              title={strictLocked ? 'Locked by strict mode' : undefined}
               className={`relative h-5 w-9 shrink-0 rounded-full transition-colors duration-200 ${
                 item.enabled
                   ? 'bg-[color:var(--color-accent)]'
                   : 'bg-[color:var(--color-line-strong)]'
-              }`}
+              } disabled:cursor-not-allowed disabled:opacity-50`}
             >
               <span
                 className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-all duration-200 ${
@@ -302,7 +309,9 @@ export function BlockList({ items, onChange, mode, isRunning }: BlockListProps) 
             <button
               type="button"
               onClick={() => remove(item.id)}
-              className="rounded-md p-1.5 text-[color:var(--color-ink-faint)] opacity-0 transition hover:bg-[color:var(--color-surface-3)] hover:text-red-600 group-hover:opacity-100 focus-visible:opacity-100"
+              disabled={strictLocked}
+              title={strictLocked ? 'Locked by strict mode' : undefined}
+              className="rounded-md p-1.5 text-[color:var(--color-ink-faint)] opacity-0 transition hover:bg-[color:var(--color-surface-3)] hover:text-red-600 group-hover:opacity-100 focus-visible:opacity-100 disabled:hidden"
               aria-label={`Remove ${item.label}`}
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">

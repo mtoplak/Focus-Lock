@@ -12,6 +12,7 @@ export interface Settings {
   soundEnabled: boolean
   notificationsEnabled: boolean
   voiceControlEnabled: boolean
+  strictMode: boolean
 }
 
 export interface BlockedItem {
@@ -37,6 +38,7 @@ export const DEFAULT_SETTINGS: Settings = {
   soundEnabled: true,
   notificationsEnabled: true,
   voiceControlEnabled: false,
+  strictMode: false,
 }
 
 export const DEFAULT_BLOCKED: BlockedItem[] = [

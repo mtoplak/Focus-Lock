@@ -7,9 +7,10 @@ import { VoiceCommandList } from './VoiceCommandList'
 interface SettingsViewProps {
   settings: Settings
   onChange: (settings: Settings) => void
+  strictLocked?: boolean
 }
 
-export function SettingsView({ settings, onChange }: SettingsViewProps) {
+export function SettingsView({ settings, onChange, strictLocked = false }: SettingsViewProps) {
   const update = <K extends keyof Settings>(key: K, value: Settings[K]) => {
     onChange({ ...settings, [key]: value })
   }
@@ -40,6 +41,7 @@ export function SettingsView({ settings, onChange }: SettingsViewProps) {
         </p>
       </header>
 
+      <fieldset disabled={strictLocked} className="disabled:opacity-60">
       <section className="mb-5 rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-6">
         <h3 className="mb-5 text-[15px] font-semibold tracking-tight text-[color:var(--color-ink)]">
           Duration
@@ -132,6 +134,12 @@ export function SettingsView({ settings, onChange }: SettingsViewProps) {
               void handleNotificationsToggle(v)
             }}
           />
+          <ToggleRow
+            label="Strict mode"
+            description="During a focus session you can't pause, reset, skip, change mode, edit the block list, or change settings. Use it when you want blocking to be unavoidable."
+            checked={settings.strictMode}
+            onChange={(v) => update('strictMode', v)}
+          />
         </div>
       </section>
 
@@ -151,16 +159,17 @@ export function SettingsView({ settings, onChange }: SettingsViewProps) {
 
       <div className="flex items-center justify-between">
         <p className="text-[12.5px] text-[color:var(--color-ink-faint)]">
-          Saved automatically.
+          {strictLocked ? 'Locked while a strict-mode focus session is running.' : 'Saved automatically.'}
         </p>
         <button
           type="button"
           onClick={() => onChange(DEFAULT_SETTINGS)}
-          className="rounded-md border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3.5 py-1.5 text-[12.5px] text-[color:var(--color-ink-muted)] transition hover:border-[color:var(--color-line-strong)] hover:text-[color:var(--color-ink)]"
+          className="rounded-md border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3.5 py-1.5 text-[12.5px] text-[color:var(--color-ink-muted)] transition hover:border-[color:var(--color-line-strong)] hover:text-[color:var(--color-ink)] disabled:cursor-not-allowed disabled:opacity-50"
         >
           Reset to defaults
         </button>
       </div>
+      </fieldset>
     </div>
   )
 }
