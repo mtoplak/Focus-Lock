@@ -9,6 +9,7 @@ use axum::{
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::net::SocketAddr;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
@@ -21,6 +22,8 @@ struct StatusResponse {
     version: &'static str,
     #[serde(skip_serializing_if = "Option::is_none", rename = "lastKill")]
     last_kill: Option<String>,
+    #[serde(rename = "killCounts")]
+    kill_counts: HashMap<String, u64>,
     #[serde(rename = "urlBlocking")]
     url_blocking: UrlBlockStatus,
 }
@@ -48,6 +51,7 @@ async fn status(State(state): State<AppState>) -> impl IntoResponse {
         agent: "focuslock",
         version: VERSION,
         last_kill: snap.last_kill,
+        kill_counts: snap.kill_counts,
         url_blocking: snap.url_status,
     })
 }

@@ -1,7 +1,18 @@
-import type { SessionRecord } from '../types'
+import { useState } from 'react'
+import { useAgent } from '../hooks/useAgent'
+import {
+  computeLongestStreak,
+  computePersonalBest,
+  formatMinutes,
+  formatShortDate,
+  topBlockedApps,
+} from '../lib/statsHelpers'
+import type { AppBlockCount, SessionRecord } from '../types'
 
 interface StatsProps {
   history: SessionRecord[]
+  blockCounts: AppBlockCount[]
+  onResetStats: () => void
 }
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -15,13 +26,6 @@ const getLast7Days = () => {
     d.setDate(today.getDate() - (6 - i))
     return d
   })
-}
-
-const formatMinutes = (mins: number) => {
-  if (mins < 60) return `${mins}m`
-  const h = Math.floor(mins / 60)
-  const m = mins % 60
-  return m === 0 ? `${h}h` : `${h}h ${m}m`
 }
 
 const computeStreak = (history: SessionRecord[]) => {
@@ -46,7 +50,9 @@ const computeStreak = (history: SessionRecord[]) => {
   return streak
 }
 
-export function Stats({ history }: StatsProps) {
+export function Stats({ history, blockCounts, onResetStats }: StatsProps) {
+  const agent = useAgent()
+  const [confirmResetOpen, setConfirmResetOpen] = useState(false)
   const today = isoDate(new Date())
   const todayRec = history.find((r) => r.date === today)
   const todaySessions = todayRec?.completedSessions ?? 0
@@ -55,6 +61,9 @@ export function Stats({ history }: StatsProps) {
   const totalSessions = history.reduce((sum, r) => sum + r.completedSessions, 0)
   const totalMinutes = history.reduce((sum, r) => sum + r.focusMinutes, 0)
   const streak = computeStreak(history)
+  const longestStreak = computeLongestStreak(history)
+  const personalBest = computePersonalBest(history)
+  const topApps = topBlockedApps(blockCounts)
 
   const last7 = getLast7Days()
   const last7Data = last7.map((d) => {
@@ -63,11 +72,12 @@ export function Stats({ history }: StatsProps) {
   })
   const maxMinutes = Math.max(60, ...last7Data.map((d) => d.minutes))
   const weekTotal = last7Data.reduce((sum, d) => sum + d.minutes, 0)
-  const bestDay = last7Data.reduce(
+  const weekBest = last7Data.reduce(
     (best, d) => (d.minutes > best.minutes ? d : best),
     last7Data[0],
   )
   const activeDays = history.filter((r) => r.completedSessions > 0).length
+  const maxBlockCount = Math.max(1, ...topApps.map((a) => a.count))
 
   return (
     <div className="mx-auto w-full max-w-3xl">
@@ -80,7 +90,6 @@ export function Stats({ history }: StatsProps) {
         </p>
       </header>
 
-      {/* stat grid */}
       <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatCard label="Today — sessions" value={todaySessions.toString()} />
         <StatCard label="Today — focus" value={formatMinutes(todayMinutes)} />
@@ -92,7 +101,6 @@ export function Stats({ history }: StatsProps) {
         <StatCard label="Total sessions" value={totalSessions.toString()} />
       </div>
 
-      {/* week chart */}
       <section className="mb-6 rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-6">
         <div className="mb-6 flex items-baseline justify-between">
           <div>
@@ -100,8 +108,8 @@ export function Stats({ history }: StatsProps) {
               Last 7 days
             </h3>
             <p className="mt-0.5 text-[12px] text-[color:var(--color-ink-faint)]">
-              {bestDay.minutes > 0
-                ? `Best day — ${formatMinutes(bestDay.minutes)}`
+              {weekBest.minutes > 0
+                ? `Best this week — ${formatMinutes(weekBest.minutes)}`
                 : 'No completed days yet'}
             </p>
           </div>
@@ -114,27 +122,31 @@ export function Stats({ history }: StatsProps) {
             </div>
           </div>
         </div>
-        <div className="flex h-48 items-end justify-between gap-2.5">
+        <div className="flex justify-between gap-2.5">
           {last7Data.map((d, i) => {
             const heightPct = (d.minutes / maxMinutes) * 100
             const isToday = isoDate(d.date) === today
             const hasData = d.minutes > 0
+            const barHeight = hasData ? `${Math.max(heightPct, 6)}%` : '0%'
             return (
               <div key={i} className="group flex flex-1 flex-col items-center gap-2">
-                <div className="relative flex w-full flex-1 items-end">
-                  <span className="absolute inset-x-0 bottom-0 top-0 rounded-md bg-[color:var(--color-surface-2)]" />
+                <div className="relative h-40 w-full">
+                  <span
+                    className="pointer-events-none absolute inset-0 rounded-md bg-[color:var(--color-surface-2)]"
+                    aria-hidden
+                  />
                   <div
-                    className={`relative w-full rounded-md transition-all duration-300 ${
+                    className={`absolute inset-x-0 bottom-0 rounded-md transition-all duration-300 ${
                       hasData
                         ? isToday
                           ? 'bg-[color:var(--color-accent)]'
                           : 'bg-[color:var(--color-accent)]/35'
                         : ''
                     }`}
-                    style={{ height: hasData ? `${Math.max(heightPct, 4)}%` : '0%' }}
+                    style={{ height: barHeight }}
                   >
                     {hasData && (
-                      <span className="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-[color:var(--color-ink)] px-2 py-1 font-mono text-[10px] text-white opacity-0 shadow-sm transition group-hover:opacity-100">
+                      <span className="pointer-events-none absolute -top-7 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-md bg-[color:var(--color-ink)] px-2 py-1 font-mono text-[10px] text-white opacity-0 shadow-sm transition group-hover:opacity-100">
                         {formatMinutes(d.minutes)}
                       </span>
                     )}
@@ -155,8 +167,7 @@ export function Stats({ history }: StatsProps) {
         </div>
       </section>
 
-      {/* all-time totals */}
-      <section className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-6">
+      <section className="mb-6 rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-6">
         <h3 className="mb-4 text-[15px] font-semibold tracking-tight text-[color:var(--color-ink)]">
           All-time
         </h3>
@@ -164,8 +175,141 @@ export function Stats({ history }: StatsProps) {
           <Row label="Completed focus sessions" value={totalSessions.toString()} />
           <Row label="Total focus time" value={formatMinutes(totalMinutes)} />
           <Row label="Active days" value={activeDays.toString()} />
+          <Row
+            label="Longest streak"
+            value={
+              longestStreak === 0
+                ? '—'
+                : `${longestStreak} ${longestStreak === 1 ? 'day' : 'days'}`
+            }
+          />
+          <Row
+            label="Personal best"
+            value={
+              personalBest
+                ? `${formatMinutes(personalBest.focusMinutes)} · ${formatShortDate(personalBest.date)}`
+                : '—'
+            }
+          />
         </dl>
       </section>
+
+      <section className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-6">
+        <h3 className="text-[15px] font-semibold tracking-tight text-[color:var(--color-ink)]">
+          Most blocked apps
+        </h3>
+        <p className="mt-1 mb-5 text-[12.5px] text-[color:var(--color-ink-muted)]">
+          Times the desktop agent closed an app during focus (saved on this device).
+        </p>
+
+        {topApps.length === 0 ? (
+          <p className="text-[13px] text-[color:var(--color-ink-muted)]">
+            {agent.status === 'connected'
+              ? 'No blocked apps closed yet. Add apps on the Blocks tab and run a focus session.'
+              : 'Start the desktop agent to track blocked apps during focus.'}
+          </p>
+        ) : (
+          <ul className="space-y-3">
+            {topApps.map((app) => (
+              <li key={app.key}>
+                <div className="mb-1.5 flex items-baseline justify-between gap-3">
+                  <span className="truncate text-[13.5px] font-medium text-[color:var(--color-ink)]">
+                    {app.label}
+                  </span>
+                  <span className="shrink-0 font-mono text-[12px] tabular-nums text-[color:var(--color-ink-muted)]">
+                    {app.count}×
+                  </span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-[color:var(--color-surface-2)]">
+                  <div
+                    className="h-full rounded-full bg-[color:var(--color-accent)]/70 transition-all"
+                    style={{ width: `${(app.count / maxBlockCount) * 100}%` }}
+                  />
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <div className="mt-8 flex flex-col items-start gap-2 border-t border-[color:var(--color-line)] pt-6">
+        <button
+          type="button"
+          onClick={() => setConfirmResetOpen(true)}
+          className="rounded-md border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3.5 py-2 text-[13px] font-medium text-[color:var(--color-ink-muted)] transition hover:border-red-300/60 hover:bg-red-50 hover:text-red-800 dark:hover:bg-red-950/40 dark:hover:text-red-200"
+        >
+          Reset all stats
+        </button>
+        <p className="text-[12px] text-[color:var(--color-ink-faint)]">
+          Clears focus history and blocked-app counts on this device only.
+        </p>
+      </div>
+
+      {confirmResetOpen && (
+        <ResetStatsDialog
+          onCancel={() => setConfirmResetOpen(false)}
+          onConfirm={() => {
+            onResetStats()
+            setConfirmResetOpen(false)
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+function ResetStatsDialog({
+  onCancel,
+  onConfirm,
+}: {
+  onCancel: () => void
+  onConfirm: () => void
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+      onClick={onCancel}
+      role="presentation"
+    >
+      <div
+        className="w-full max-w-md rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-canvas)] p-6 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="reset-stats-title"
+        aria-describedby="reset-stats-desc"
+      >
+        <h3
+          id="reset-stats-title"
+          className="text-[17px] font-semibold tracking-tight text-[color:var(--color-ink)]"
+        >
+          Reset all stats?
+        </h3>
+        <p id="reset-stats-desc" className="mt-2 text-[14px] leading-relaxed text-[color:var(--color-ink-muted)]">
+          This permanently deletes your focus history, streaks, personal best, and blocked-app
+          counts from this browser. It cannot be undone.
+        </p>
+        <p className="mt-2 text-[12.5px] text-[color:var(--color-ink-faint)]">
+          Settings, your block list, and sign-in are not affected. Restart the desktop agent to
+          clear its in-memory kill counters.
+        </p>
+        <div className="mt-6 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-md border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-4 py-2 text-[13px] font-medium text-[color:var(--color-ink-muted)] transition hover:text-[color:var(--color-ink)]"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="rounded-md bg-red-600 px-4 py-2 text-[13px] font-medium text-white transition hover:bg-red-700"
+          >
+            Reset stats
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -203,9 +347,9 @@ function StatCard({
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-baseline justify-between py-2.5 first:pt-0 last:pb-0">
+    <div className="flex items-baseline justify-between gap-4 py-2.5 first:pt-0 last:pb-0">
       <dt className="text-[13.5px] text-[color:var(--color-ink-muted)]">{label}</dt>
-      <dd className="font-mono text-[13.5px] tabular-nums text-[color:var(--color-ink)]">
+      <dd className="text-right font-mono text-[13.5px] tabular-nums text-[color:var(--color-ink)]">
         {value}
       </dd>
     </div>

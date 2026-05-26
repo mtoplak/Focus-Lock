@@ -12,7 +12,9 @@ import { BlockList } from '../components/BlockList'
 import { Stats } from '../components/Stats'
 import { SettingsView } from '../components/SettingsView'
 import { UserMenu } from '../components/UserMenu'
-import type { BlockedItem, SessionRecord, Settings } from '../types'
+import type { AppBlockCount, BlockedItem, SessionRecord, Settings } from '../types'
+import { useBlockKillSync } from '../hooks/useBlockKillSync'
+import { clearAllStatsStorage } from '../lib/statsStorage'
 import { DEFAULT_BLOCKED, DEFAULT_SETTINGS } from '../types'
 
 type View = 'timer' | 'block' | 'stats' | 'settings'
@@ -84,6 +86,15 @@ export function HomePage() {
   const [settings, setSettings] = useLocalStorage<Settings>('fl.settings', DEFAULT_SETTINGS)
   const [blocked, setBlocked] = useLocalStorage<BlockedItem[]>('fl.blocked', DEFAULT_BLOCKED)
   const [history, setHistory] = useLocalStorage<SessionRecord[]>('fl.history', [])
+  const [blockCounts, setBlockCounts] = useLocalStorage<AppBlockCount[]>('fl.blockCounts', [])
+
+  useBlockKillSync(setBlockCounts)
+
+  const resetStats = useCallback(() => {
+    clearAllStatsStorage()
+    setHistory([])
+    setBlockCounts([])
+  }, [setHistory, setBlockCounts])
 
   const recordFocus = useCallback(
     (focusMinutes: number) => {
@@ -275,7 +286,9 @@ export function HomePage() {
             strictLocked={isStrictLocked}
           />
         )}
-        {view === 'stats' && <Stats history={history} />}
+        {view === 'stats' && (
+          <Stats history={history} blockCounts={blockCounts} onResetStats={resetStats} />
+        )}
         {view === 'settings' && (
           <SettingsView settings={settings} onChange={setSettings} strictLocked={isStrictLocked} />
         )}

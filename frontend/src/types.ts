@@ -28,6 +28,14 @@ export interface SessionRecord {
   completedSessions: number
 }
 
+/** Cumulative app kill counts (from desktop agent during focus). */
+export interface AppBlockCount {
+  /** Normalized key, e.g. discord.exe */
+  key: string
+  label: string
+  count: number
+}
+
 export const DEFAULT_SETTINGS: Settings = {
   focusMinutes: 25,
   shortBreakMinutes: 5,

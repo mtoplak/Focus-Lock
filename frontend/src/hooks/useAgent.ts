@@ -31,10 +31,11 @@ export interface UrlBlockState {
   message?: string
 }
 
-interface AgentState {
+export interface AgentState {
   status: AgentStatus
   version?: string
   lastKill?: string
+  killCounts?: Record<string, number>
   urlBlocking?: UrlBlockState
 }
 
@@ -60,12 +61,14 @@ const startPolling = () => {
       const body = (await res.json()) as {
         version?: string
         lastKill?: string
+        killCounts?: Record<string, number>
         urlBlocking?: { kind: string; message?: string }
       }
       setState({
         status: 'connected',
         version: body.version,
         lastKill: body.lastKill,
+        killCounts: body.killCounts,
         urlBlocking: body.urlBlocking as UrlBlockState | undefined,
       })
     } catch {
@@ -85,18 +88,19 @@ const stopPolling = () => {
   }
 }
 
+export function subscribeAgentState(listener: (state: AgentState) => void): () => void {
+  listeners.add(listener)
+  listener(cachedState)
+  startPolling()
+  return () => {
+    listeners.delete(listener)
+    stopPolling()
+  }
+}
+
 export function useAgent(): AgentState {
   const [state, setLocal] = useState<AgentState>(cachedState)
-
-  useEffect(() => {
-    listeners.add(setLocal)
-    startPolling()
-    return () => {
-      listeners.delete(setLocal)
-      stopPolling()
-    }
-  }, [])
-
+  useEffect(() => subscribeAgentState(setLocal), [])
   return state
 }
 

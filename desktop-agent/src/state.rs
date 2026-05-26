@@ -24,6 +24,8 @@ pub struct InnerState {
     pub blocked_urls: HashSet<String>,
     pub focus_active: bool,
     pub last_kill: Option<String>,
+    /// Per-process kill totals for the current agent run (synced to the PWA).
+    pub kill_counts: HashMap<String, u64>,
     pub exe_paths: HashMap<String, PathBuf>,
     pub icon_cache: HashMap<String, Vec<u8>>,
     pub url_status: UrlBlockStatus,
@@ -46,6 +48,7 @@ impl AppState {
             blocked_urls: g.blocked_urls.clone(),
             focus_active: g.focus_active,
             last_kill: g.last_kill.clone(),
+            kill_counts: g.kill_counts.clone(),
             url_status: g.url_status.clone(),
         }
     }
@@ -60,6 +63,8 @@ impl AppState {
     pub fn record_kill(&self, name: &str) {
         let mut g = self.inner.lock();
         g.last_kill = Some(name.to_string());
+        let key = normalize_name(name.to_string());
+        *g.kill_counts.entry(key).or_insert(0) += 1;
     }
 
     pub fn set_url_status(&self, status: UrlBlockStatus) {
@@ -93,6 +98,7 @@ pub struct Snapshot {
     pub blocked_urls: HashSet<String>,
     pub focus_active: bool,
     pub last_kill: Option<String>,
+    pub kill_counts: HashMap<String, u64>,
     pub url_status: UrlBlockStatus,
 }
 
