@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import type { UseTimerResult } from '../hooks/useTimer'
 import type { Settings, TimerMode } from '../types'
 
@@ -27,9 +28,62 @@ const formatTime = (totalSeconds: number) => {
   return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
 }
 
+type CycleStep = { kind: TimerMode }
+
+const buildCycle = (sessionsInCycle: number): CycleStep[] => {
+  const steps: CycleStep[] = []
+  for (let i = 0; i < sessionsInCycle; i++) {
+    steps.push({ kind: 'focus' })
+    if (i < sessionsInCycle - 1) steps.push({ kind: 'short-break' })
+  }
+  steps.push({ kind: 'long-break' })
+  return steps
+}
+
 export function Timer({ timer, settings, task, onTaskChange, strictLocked = false }: TimerProps) {
   const { mode, setMode, secondsLeft, totalSeconds, isRunning, start, pause, reset, skip, completedFocusSessions } =
     timer
+  const [showInfo, setShowInfo] = useState(false)
+  const infoRef = useRef<HTMLDivElement | null>(null)
+  const hideTimerRef = useRef<number | null>(null)
+
+  const openInfo = () => {
+    if (hideTimerRef.current !== null) {
+      window.clearTimeout(hideTimerRef.current)
+      hideTimerRef.current = null
+    }
+    setShowInfo(true)
+  }
+  const scheduleHideInfo = () => {
+    if (hideTimerRef.current !== null) window.clearTimeout(hideTimerRef.current)
+    hideTimerRef.current = window.setTimeout(() => {
+      setShowInfo(false)
+      hideTimerRef.current = null
+    }, 150)
+  }
+
+  useEffect(
+    () => () => {
+      if (hideTimerRef.current !== null) window.clearTimeout(hideTimerRef.current)
+    },
+    [],
+  )
+
+  useEffect(() => {
+    if (!showInfo) return
+    const onDocClick = (e: MouseEvent) => {
+      if (infoRef.current && !infoRef.current.contains(e.target as Node)) setShowInfo(false)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowInfo(false)
+    }
+    document.addEventListener('mousedown', onDocClick)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDocClick)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [showInfo])
 
   const progress = totalSeconds === 0 ? 0 : 1 - secondsLeft / totalSeconds
   const radius = 138
@@ -38,6 +92,20 @@ export function Timer({ timer, settings, task, onTaskChange, strictLocked = fals
   const sessionsInCycle = settings.sessionsUntilLongBreak
   const completedInCycle = completedFocusSessions % sessionsInCycle
   const modeColor = MODE_COLOR[mode]
+
+  const cycle = buildCycle(sessionsInCycle)
+  // Map (mode, completedInCycle) to step index in the cycle sequence.
+  // Sequence is [F, SB, F, SB, ..., F, LB] — focuses at even indices, short breaks at odd, long break last.
+  const currentStepIdx =
+    mode === 'long-break'
+      ? cycle.length - 1
+      : mode === 'focus'
+        ? completedInCycle * 2
+        : completedInCycle * 2 - 1
+
+  const focusNumber = Math.min(completedInCycle + (mode === 'focus' ? 1 : 0), sessionsInCycle)
+  const nextStep = cycle[currentStepIdx + 1]
+  const nextLabel = nextStep ? MODE_LABELS[nextStep.kind] : MODE_LABELS.focus
 
   return (
     <div className="flex w-full max-w-xl flex-col items-center gap-8">
@@ -49,27 +117,106 @@ export function Timer({ timer, settings, task, onTaskChange, strictLocked = fals
         className="w-full max-w-md border-b border-[color:var(--color-line)] bg-transparent px-1 py-2 text-center text-[15px] text-[color:var(--color-ink)] placeholder:text-[color:var(--color-ink-faint)] focus:border-[color:var(--color-accent)] focus:outline-none"
       />
 
-      {/* mode tabs */}
-      <div className="flex gap-1 rounded-full border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-1">
-        {(['focus', 'short-break', 'long-break'] as TimerMode[]).map((m) => {
-          const active = mode === m
-          return (
-            <button
-              key={m}
-              type="button"
-              onClick={() => setMode(m)}
-              disabled={strictLocked}
-              title={strictLocked ? 'Locked by strict mode' : undefined}
-              className={`rounded-full px-4 py-1.5 text-[13px] font-medium transition ${
-                active
-                  ? 'bg-[color:var(--color-ink)] text-white'
-                  : 'text-[color:var(--color-ink-muted)] hover:text-[color:var(--color-ink)]'
-              } disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-[color:var(--color-ink-muted)]`}
-            >
-              {MODE_LABELS[m]}
-            </button>
-          )
-        })}
+      {/* mode tabs + info */}
+      <div className="relative flex items-center gap-2" ref={infoRef}>
+        <div className="flex gap-1 rounded-full border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-1">
+          {(['focus', 'short-break', 'long-break'] as TimerMode[]).map((m) => {
+            const active = mode === m
+            return (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setMode(m)}
+                disabled={strictLocked}
+                title={strictLocked ? 'Locked by strict mode' : undefined}
+                className={`rounded-full px-4 py-1.5 text-[13px] font-medium transition ${
+                  active
+                    ? 'bg-[color:var(--color-ink)] text-white'
+                    : 'text-[color:var(--color-ink-muted)] hover:text-[color:var(--color-ink)]'
+                } disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-[color:var(--color-ink-muted)]`}
+              >
+                {MODE_LABELS[m]}
+              </button>
+            )
+          })}
+        </div>
+        <div
+          className="relative"
+          onMouseEnter={openInfo}
+          onMouseLeave={scheduleHideInfo}
+        >
+          <button
+            type="button"
+            onFocus={openInfo}
+            onBlur={scheduleHideInfo}
+            aria-label="How the Pomodoro timer works"
+            aria-expanded={showInfo}
+            className={`flex h-7 w-7 items-center justify-center rounded-full border text-[color:var(--color-ink-muted)] transition ${
+              showInfo
+                ? 'border-[color:var(--color-line-strong)] bg-[color:var(--color-surface-2)] text-[color:var(--color-ink)]'
+                : 'border-[color:var(--color-line)] bg-[color:var(--color-surface)] hover:border-[color:var(--color-line-strong)] hover:text-[color:var(--color-ink)]'
+            }`}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 11v5" />
+              <circle cx="12" cy="7.75" r="0.6" fill="currentColor" />
+            </svg>
+          </button>
+
+        {showInfo && (
+          <div
+            role="dialog"
+            aria-label="How the Pomodoro timer works"
+            className="absolute top-[calc(100%+10px)] left-1/2 z-20 w-[320px] -translate-x-1/2 rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 text-left shadow-[0_8px_28px_rgba(0,0,0,0.08)]"
+          >
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-[13px] font-semibold tracking-tight text-[color:var(--color-ink)]">
+                How the Pomodoro timer works
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowInfo(false)}
+                aria-label="Close"
+                className="-mr-1 flex h-6 w-6 items-center justify-center rounded-md text-[color:var(--color-ink-faint)] transition hover:bg-[color:var(--color-surface-2)] hover:text-[color:var(--color-ink-muted)]"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <ol className="space-y-2 text-[12.5px] leading-relaxed text-[color:var(--color-ink-muted)]">
+              <li className="flex gap-2.5">
+                <span className="mt-0.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: MODE_COLOR.focus }} />
+                <span>
+                  Focus for <span className="font-medium text-[color:var(--color-ink)]">{settings.focusMinutes} min</span>.
+                </span>
+              </li>
+              <li className="flex gap-2.5">
+                <span className="mt-0.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: MODE_COLOR['short-break'] }} />
+                <span>
+                  Take a <span className="font-medium text-[color:var(--color-ink)]">{settings.shortBreakMinutes} min</span> short break.
+                </span>
+              </li>
+              <li className="flex gap-2.5">
+                <span className="mt-0.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-[color:var(--color-ink-fainter)]" />
+                <span>
+                  Repeat <span className="font-medium text-[color:var(--color-ink)]">{sessionsInCycle}</span> times.
+                </span>
+              </li>
+              <li className="flex gap-2.5">
+                <span className="mt-0.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: MODE_COLOR['long-break'] }} />
+                <span>
+                  Then a longer <span className="font-medium text-[color:var(--color-ink)]">{settings.longBreakMinutes} min</span> break before starting the next cycle.
+                </span>
+              </li>
+            </ol>
+            <p className="mt-3 border-t border-[color:var(--color-line)] pt-2.5 text-[11.5px] text-[color:var(--color-ink-faint)]">
+              Tip: adjust durations and auto-start in Settings.
+            </p>
+          </div>
+        )}
+        </div>
       </div>
 
       {/* ring + numerals */}
@@ -167,38 +314,58 @@ export function Timer({ timer, settings, task, onTaskChange, strictLocked = fals
         </button>
       </div>
 
-      {/* session segments + caption */}
+      {/* cycle sequence + caption */}
       <div className="flex flex-col items-center gap-2.5">
-        <div className="flex items-center gap-1.5">
-          {Array.from({ length: sessionsInCycle }).map((_, i) => {
-            const isDone = i < completedInCycle
-            const isCurrent = i === completedInCycle && mode === 'focus'
+        <div className="flex items-center gap-1">
+          {cycle.map((step, i) => {
+            const isDone = i < currentStepIdx
+            const isCurrent = i === currentStepIdx
+            const color = MODE_COLOR[step.kind]
+            const isFocus = step.kind === 'focus'
+            const isLong = step.kind === 'long-break'
+            // widths: focus = wide, short break = narrow, long break = wide
+            const width = isFocus ? 'w-9' : isLong ? 'w-9' : 'w-3'
+            const base = 'h-2 rounded-full transition-all'
+            let style: React.CSSProperties
+            if (isDone) {
+              style = { background: color, opacity: 0.85 }
+            } else if (isCurrent) {
+              style = { background: color, boxShadow: `0 0 0 3px ${color}25` }
+            } else {
+              style = { background: 'var(--color-line-strong)', opacity: 0.55 }
+            }
+            const labelMap: Record<TimerMode, string> = {
+              focus: 'Focus',
+              'short-break': 'Short break',
+              'long-break': 'Long break',
+            }
             return (
               <span
                 key={i}
-                className={`h-2 w-10 rounded-full transition-all ${
-                  isDone
-                    ? 'bg-[color:var(--color-accent)]'
-                    : isCurrent
-                      ? 'bg-[color:var(--color-accent)]/35'
-                      : 'bg-[color:var(--color-line-strong)]/70'
-                }`}
+                className={`${base} ${width}`}
+                style={style}
+                title={`${labelMap[step.kind]}${isCurrent ? ' (current)' : isDone ? ' (done)' : ''}`}
               />
             )
           })}
         </div>
         <div className="flex items-center gap-2 text-[12.5px] text-[color:var(--color-ink-muted)]">
           <span className="font-mono tabular-nums text-[color:var(--color-ink-soft)]">
-            {Math.min(completedInCycle + (mode === 'focus' ? 1 : 0), sessionsInCycle)} of {sessionsInCycle}
+            {mode === 'long-break'
+              ? 'Long break'
+              : `Focus ${focusNumber} of ${sessionsInCycle}`}
           </span>
           <span className="text-[color:var(--color-ink-faint)]">·</span>
           <span>
-            {completedFocusSessions === 0
-              ? 'Start your first session'
-              : `${completedFocusSessions} ${
-                  completedFocusSessions === 1 ? 'session' : 'sessions'
-                } today`}
+            Next: <span className="text-[color:var(--color-ink-soft)]">{nextLabel}</span>
           </span>
+        </div>
+        <div className="text-[11.5px] text-[color:var(--color-ink-faint)]">
+          {completedFocusSessions === 0
+            ? 'Start your first session'
+            : `${completedFocusSessions} ${
+                completedFocusSessions === 1 ? 'session' : 'sessions'
+              } today`}
         </div>
       </div>
     </div>

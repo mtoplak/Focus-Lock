@@ -113,7 +113,11 @@ export function useAmbient(): UseAmbientResult {
     }
     if (audioElRef.current) {
       audioElRef.current.pause()
-      audioElRef.current.src = ''
+      // Detach src without triggering a spurious 'error' event. Setting
+      // src = '' resolves to the document URL and fails to load async,
+      // which would flip fileError back to true after the new audio is up.
+      audioElRef.current.removeAttribute('src')
+      audioElRef.current.load()
       audioElRef.current = null
     }
     setFileError(false)
@@ -127,6 +131,9 @@ export function useAmbient(): UseAmbientResult {
       audio.volume = state.volume
       audio.preload = 'auto'
       audio.addEventListener('error', () => {
+        // Guard against stale events fired by a previous audio element
+        // (e.g. after track switch or StrictMode remount).
+        if (audioElRef.current !== audio) return
         setFileError(true)
         // eslint-disable-next-line no-console
         console.warn(
