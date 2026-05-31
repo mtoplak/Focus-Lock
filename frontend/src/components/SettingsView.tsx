@@ -200,15 +200,15 @@ function Stepper({
       <div className="mb-1.5 text-[11.5px] font-medium tracking-wide text-[color:var(--color-ink-muted)]">
         {label}
       </div>
-      <div className={`flex items-center rounded-lg border border-[color:var(--color-line)] bg-[color:var(--color-canvas)] ${wide ? '' : ''}`}>
+      <div className={`inline-flex items-center rounded-lg border border-[color:var(--color-line)] bg-[color:var(--color-canvas)] ${wide ? '' : ''}`}>
         <button
           type="button"
           onClick={dec}
           disabled={value <= min}
-          className="flex h-9 w-9 items-center justify-center text-[color:var(--color-ink-muted)] transition hover:text-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-30"
+          className="flex h-8 w-7 cursor-pointer items-center justify-center text-[color:var(--color-ink-muted)] transition hover:text-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-30"
           aria-label="Decrease"
         >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
             <path d="M5 12h14" />
           </svg>
         </button>
@@ -221,16 +221,16 @@ function Stepper({
             const next = Number(e.target.value)
             if (Number.isFinite(next)) onChange(clamp(next))
           }}
-          className="w-12 bg-transparent py-2 text-center font-mono text-[15px] font-medium tabular-nums text-[color:var(--color-ink)] focus:outline-none"
+          className="w-9 bg-transparent py-1.5 text-center font-mono text-[14px] font-medium tabular-nums text-[color:var(--color-ink)] focus:outline-none"
         />
         <button
           type="button"
           onClick={inc}
           disabled={value >= max}
-          className="flex h-9 w-9 items-center justify-center text-[color:var(--color-ink-muted)] transition hover:text-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-30"
+          className="flex h-8 w-7 cursor-pointer items-center justify-center text-[color:var(--color-ink-muted)] transition hover:text-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-30"
           aria-label="Increase"
         >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
             <path d="M12 5v14M5 12h14" />
           </svg>
         </button>

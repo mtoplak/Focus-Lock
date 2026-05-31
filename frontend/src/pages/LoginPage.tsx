@@ -1,5 +1,9 @@
+import { useState, type FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { ApiError } from '../lib/api'
+
+type Tab = 'signin' | 'signup'
 
 function GoogleIcon() {
   return (
@@ -25,10 +29,58 @@ function GoogleIcon() {
 }
 
 export function LoginPage() {
-  const { user, loading, signInWithGoogle } = useAuth()
+  const {
+    user,
+    loading,
+    signInWithGoogle,
+    signInWithPassword,
+    signUpWithPassword,
+    continueAsGuest,
+  } = useAuth()
+
+  const [tab, setTab] = useState<Tab>('signin')
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   if (!loading && user) {
     return <Navigate to="/" replace />
+  }
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault()
+    if (submitting) return
+    setError(null)
+    setSubmitting(true)
+    try {
+      if (tab === 'signin') {
+        await signInWithPassword({ email, password })
+      } else {
+        await signUpWithPassword({
+          email,
+          password,
+          name: name.trim() || undefined,
+        })
+      }
+      // Redirect is handled by the Navigate above once user is set in context.
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.message)
+      } else if (err instanceof Error) {
+        setError(err.message)
+      } else {
+        setError('Something went wrong. Please try again.')
+      }
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const switchTab = (next: Tab) => {
+    setTab(next)
+    setError(null)
   }
 
   return (
@@ -54,22 +106,138 @@ export function LoginPage() {
             Focus Lock
           </h1>
           <p className="mt-2 text-sm text-[color:var(--color-ink-muted)]">
-            Sign in to sync your focus sessions and settings.
+            {tab === 'signin'
+              ? 'Welcome back. Sign in to continue.'
+              : 'Create an account to sync your focus sessions.'}
           </p>
         </div>
 
         <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+          <div className="mb-5 flex gap-1 rounded-lg border border-[color:var(--color-line)] bg-[color:var(--color-canvas)] p-1">
+            <button
+              type="button"
+              onClick={() => switchTab('signin')}
+              className={`flex-1 cursor-pointer rounded-md px-3 py-1.5 text-[13px] font-medium transition ${
+                tab === 'signin'
+                  ? 'bg-[color:var(--color-surface)] text-[color:var(--color-ink)] shadow-[0_1px_2px_rgba(0,0,0,0.05)]'
+                  : 'text-[color:var(--color-ink-muted)] hover:text-[color:var(--color-ink)]'
+              }`}
+            >
+              Sign in
+            </button>
+            <button
+              type="button"
+              onClick={() => switchTab('signup')}
+              className={`flex-1 cursor-pointer rounded-md px-3 py-1.5 text-[13px] font-medium transition ${
+                tab === 'signup'
+                  ? 'bg-[color:var(--color-surface)] text-[color:var(--color-ink)] shadow-[0_1px_2px_rgba(0,0,0,0.05)]'
+                  : 'text-[color:var(--color-ink-muted)] hover:text-[color:var(--color-ink)]'
+              }`}
+            >
+              Sign up
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+            {tab === 'signup' && (
+              <label className="flex flex-col gap-1">
+                <span className="text-[12px] font-medium text-[color:var(--color-ink-muted)]">
+                  Name <span className="text-[color:var(--color-ink-faint)]">(optional)</span>
+                </span>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  autoComplete="name"
+                  maxLength={80}
+                  className="rounded-md border border-[color:var(--color-line)] bg-[color:var(--color-canvas)] px-3 py-2 text-[14px] text-[color:var(--color-ink)] outline-none focus:border-[color:var(--color-accent)]"
+                />
+              </label>
+            )}
+            <label className="flex flex-col gap-1">
+              <span className="text-[12px] font-medium text-[color:var(--color-ink-muted)]">
+                Email
+              </span>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoComplete="email"
+                className="rounded-md border border-[color:var(--color-line)] bg-[color:var(--color-canvas)] px-3 py-2 text-[14px] text-[color:var(--color-ink)] outline-none focus:border-[color:var(--color-accent)]"
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-[12px] font-medium text-[color:var(--color-ink-muted)]">
+                Password
+                {tab === 'signup' && (
+                  <span className="ml-1 text-[color:var(--color-ink-faint)]">
+                    (min 8 characters)
+                  </span>
+                )}
+              </span>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={tab === 'signup' ? 8 : undefined}
+                autoComplete={tab === 'signin' ? 'current-password' : 'new-password'}
+                className="rounded-md border border-[color:var(--color-line)] bg-[color:var(--color-canvas)] px-3 py-2 text-[14px] text-[color:var(--color-ink)] outline-none focus:border-[color:var(--color-accent)]"
+              />
+            </label>
+
+            {error && (
+              <p
+                role="alert"
+                className="rounded-md border border-rose-500/30 bg-rose-500/5 px-3 py-2 text-[12.5px] text-rose-700 dark:text-rose-300"
+              >
+                {error}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="mt-1 cursor-pointer rounded-md bg-[color:var(--color-ink)] px-4 py-2.5 text-[14px] font-medium text-white transition hover:bg-[color:var(--color-ink-soft)] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {submitting
+                ? tab === 'signin'
+                  ? 'Signing in…'
+                  : 'Creating account…'
+                : tab === 'signin'
+                  ? 'Sign in'
+                  : 'Create account'}
+            </button>
+          </form>
+
+          <div className="my-5 flex items-center gap-3 text-[11px] uppercase tracking-wider text-[color:var(--color-ink-faint)]">
+            <span className="h-px flex-1 bg-[color:var(--color-line)]" />
+            or
+            <span className="h-px flex-1 bg-[color:var(--color-line)]" />
+          </div>
+
           <button
             type="button"
             onClick={signInWithGoogle}
-            disabled={loading}
-            className="flex w-full cursor-pointer items-center justify-center gap-3 rounded-lg border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-4 py-3 text-sm font-medium text-[color:var(--color-ink)] transition hover:bg-[color:var(--color-surface-2)] disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={loading || submitting}
+            className="flex w-full cursor-pointer items-center justify-center gap-3 rounded-md border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-4 py-2.5 text-[14px] font-medium text-[color:var(--color-ink)] transition hover:bg-[color:var(--color-surface-2)] disabled:cursor-not-allowed disabled:opacity-60"
           >
             <GoogleIcon />
             Continue with Google
           </button>
-          <p className="mt-4 text-center text-xs text-[color:var(--color-ink-faint)]">
-            New here? Google creates your account on first sign-in.
+
+          <button
+            type="button"
+            onClick={continueAsGuest}
+            disabled={loading || submitting}
+            className="mt-2 w-full cursor-pointer rounded-md px-4 py-2 text-[13px] font-medium text-[color:var(--color-ink-muted)] transition hover:bg-[color:var(--color-surface-2)] hover:text-[color:var(--color-ink)] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Continue as guest
+          </button>
+
+          <p className="mt-4 text-center text-[11.5px] text-[color:var(--color-ink-faint)]">
+            Guest mode keeps everything on this device — nothing syncs to the cloud.
           </p>
         </div>
       </div>

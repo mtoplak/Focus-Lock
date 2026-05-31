@@ -14,7 +14,7 @@ function initials(name: string | null, email: string): string {
 }
 
 export function UserMenu() {
-  const { user, logout } = useAuth()
+  const { user, isGuest, logout } = useAuth()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -89,7 +89,7 @@ export function UserMenu() {
               {user.name ?? 'Account'}
             </p>
             <p className="truncate text-xs text-[color:var(--color-ink-muted)]">
-              {user.email}
+              {isGuest ? 'Local only — not synced' : user.email}
             </p>
           </div>
           <button
@@ -98,7 +98,7 @@ export function UserMenu() {
             onClick={() => void handleLogout()}
             className="w-full cursor-pointer px-3 py-2.5 text-left text-sm text-[color:var(--color-ink-soft)] transition hover:bg-[color:var(--color-surface-2)]"
           >
-            Sign out
+            {isGuest ? 'Exit guest mode' : 'Sign out'}
           </button>
         </div>
       )}

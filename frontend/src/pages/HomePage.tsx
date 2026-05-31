@@ -244,7 +244,7 @@ export function HomePage() {
 
       <main
         className={`relative flex-1 px-5 pt-20 pb-16 md:px-12 md:pt-10 md:pb-10 ${
-          view === 'timer' || view === 'block'
+          (view === 'timer' || view === 'block') && !isStrictLocked
             ? 'overflow-y-auto md:overflow-hidden'
             : 'overflow-y-auto'
         }`}
@@ -272,7 +272,11 @@ export function HomePage() {
         )}
 
         {view === 'timer' && (
-          <div className="flex w-full items-start justify-center md:h-full md:items-center">
+          <div
+            className={`flex w-full items-start justify-center ${
+              isStrictLocked ? '' : 'md:h-full md:items-center'
+            }`}
+          >
             <Timer
               timer={timer}
               settings={settings}

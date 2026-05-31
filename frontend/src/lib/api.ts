@@ -146,3 +146,38 @@ export async function logoutApi(): Promise<void> {
 export function getGoogleSignInUrl(): string {
   return `${API_URL}/api/auth/google`
 }
+
+type PasswordAuthResponse = {
+  user: AuthUser
+} & AuthTokens
+
+async function postAuth(
+  path: '/api/auth/login' | '/api/auth/register',
+  body: Record<string, unknown>,
+): Promise<PasswordAuthResponse> {
+  try {
+    const { data } = await axios.post<PasswordAuthResponse>(
+      `${API_URL}${path}`,
+      body,
+    )
+    return data
+  } catch (error) {
+    if (error instanceof AxiosError) throw toApiError(error)
+    throw error
+  }
+}
+
+export function registerWithPassword(input: {
+  email: string
+  password: string
+  name?: string
+}): Promise<PasswordAuthResponse> {
+  return postAuth('/api/auth/register', input)
+}
+
+export function loginWithPassword(input: {
+  email: string
+  password: string
+}): Promise<PasswordAuthResponse> {
+  return postAuth('/api/auth/login', input)
+}
