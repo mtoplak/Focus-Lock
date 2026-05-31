@@ -24,6 +24,8 @@ struct StatusResponse {
     last_kill: Option<String>,
     #[serde(rename = "killCounts")]
     kill_counts: HashMap<String, u64>,
+    #[serde(rename = "urlBlockCounts")]
+    url_block_counts: HashMap<String, u64>,
     #[serde(rename = "urlBlocking")]
     url_blocking: UrlBlockStatus,
 }
@@ -52,6 +54,7 @@ async fn status(State(state): State<AppState>) -> impl IntoResponse {
         version: VERSION,
         last_kill: snap.last_kill,
         kill_counts: snap.kill_counts,
+        url_block_counts: snap.url_block_counts,
         url_blocking: snap.url_status,
     })
 }

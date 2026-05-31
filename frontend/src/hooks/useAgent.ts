@@ -36,6 +36,7 @@ export interface AgentState {
   version?: string
   lastKill?: string
   killCounts?: Record<string, number>
+  urlBlockCounts?: Record<string, number>
   urlBlocking?: UrlBlockState
 }
 
@@ -62,6 +63,7 @@ const startPolling = () => {
         version?: string
         lastKill?: string
         killCounts?: Record<string, number>
+        urlBlockCounts?: Record<string, number>
         urlBlocking?: { kind: string; message?: string }
       }
       setState({
@@ -69,6 +71,7 @@ const startPolling = () => {
         version: body.version,
         lastKill: body.lastKill,
         killCounts: body.killCounts,
+        urlBlockCounts: body.urlBlockCounts,
         urlBlocking: body.urlBlocking as UrlBlockState | undefined,
       })
     } catch {

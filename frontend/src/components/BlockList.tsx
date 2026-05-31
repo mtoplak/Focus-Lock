@@ -57,6 +57,8 @@ export function BlockList({ items, onChange, mode, isRunning, strictLocked = fal
   const activeUrls = items.filter((i) => i.enabled && i.kind === 'url').length
   const blockingNow = mode === 'focus' && isRunning && activeCount > 0
   const urlNeedsAdmin = agent.urlBlocking?.kind === 'needs-admin' && activeUrls > 0
+  const urlBlockingError =
+    agent.urlBlocking?.kind === 'error' && activeUrls > 0 ? agent.urlBlocking.message : undefined
 
   const add = () => {
     const trimmed = draft.trim()
@@ -143,11 +145,23 @@ export function BlockList({ items, onChange, mode, isRunning, strictLocked = fal
           <div className="flex-1">
             <p className="font-medium">URL blocking needs admin</p>
             <p className="mt-0.5 text-[12px] opacity-80">
-              The hosts file requires elevation. Stop the agent and relaunch the terminal as administrator
-              (right-click PowerShell → "Run as administrator"), then{' '}
+              DNS blocking requires elevation. Stop the agent and relaunch the terminal as administrator
+              (right-click PowerShell → &quot;Run as administrator&quot;), then{' '}
               <code className="rounded bg-amber-500/10 px-1 py-0.5 font-mono text-[11px]">cargo run</code> again.
               App blocking continues to work as-is.
             </p>
+          </div>
+        </div>
+      )}
+
+      {urlBlockingError && (
+        <div className="mb-3 flex items-start gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-[12.5px] text-amber-700 dark:text-amber-300">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 shrink-0">
+            <path d="M12 9v4M12 17h.01M10.3 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+          </svg>
+          <div className="flex-1">
+            <p className="font-medium">URL blocking unavailable</p>
+            <p className="mt-0.5 text-[12px] opacity-80">{urlBlockingError}</p>
           </div>
         </div>
       )}

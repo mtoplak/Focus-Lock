@@ -61,32 +61,11 @@ fn strip_our_section(content: &str) -> String {
     out
 }
 
-/// Normalize one user-entered domain — strip protocol, path, port, www. prefix.
-/// Returns the bare host (e.g. `youtube.com`).
-fn normalize(raw: &str) -> Option<String> {
-    let s = raw.trim().to_ascii_lowercase();
-    if s.is_empty() {
-        return None;
-    }
-    // Strip protocol
-    let s = s
-        .trim_start_matches("https://")
-        .trim_start_matches("http://")
-        .trim_start_matches("//");
-    // Strip path
-    let s = s.split('/').next().unwrap_or(s);
-    // Strip port
-    let s = s.split(':').next().unwrap_or(s);
-    // Strip leading www.
-    let s = s.trim_start_matches("www.");
-    if s.is_empty() {
-        return None;
-    }
-    Some(s.to_string())
-}
-
 fn build_block_section(domains: &HashSet<String>) -> String {
-    let mut bare: Vec<String> = domains.iter().filter_map(|d| normalize(d)).collect();
+    let mut bare: Vec<String> = domains
+        .iter()
+        .filter_map(|d| crate::domains::normalize_host(d))
+        .collect();
     bare.sort();
     bare.dedup();
 
@@ -128,10 +107,7 @@ pub fn remove() -> Result<(), HostsError> {
 /// A canonical key for a block list, used to detect when the agent needs to
 /// rewrite the hosts file (vs. a no-op sync).
 pub fn canonical_key(domains: &HashSet<String>) -> String {
-    let mut v: Vec<String> = domains.iter().filter_map(|d| normalize(d)).collect();
-    v.sort();
-    v.dedup();
-    v.join(",")
+    crate::domains::canonical_key(domains)
 }
 
 /// Best-effort DNS cache flush. Browsers and the Windows DNS Client service

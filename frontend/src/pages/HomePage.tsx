@@ -12,8 +12,8 @@ import { BlockList } from '../components/BlockList'
 import { Stats } from '../components/Stats'
 import { SettingsView } from '../components/SettingsView'
 import { UserMenu } from '../components/UserMenu'
-import type { AppBlockCount, BlockedItem, SessionRecord, Settings } from '../types'
-import { useBlockKillSync } from '../hooks/useBlockKillSync'
+import type { AppBlockCount, BlockedItem, SessionRecord, Settings, UrlBlockCount } from '../types'
+import { useAgentBlockStatsSync } from '../hooks/useBlockKillSync'
 import { clearAllStatsStorage } from '../lib/statsStorage'
 import { DEFAULT_BLOCKED, DEFAULT_SETTINGS } from '../types'
 
@@ -87,14 +87,19 @@ export function HomePage() {
   const [blocked, setBlocked] = useLocalStorage<BlockedItem[]>('fl.blocked', DEFAULT_BLOCKED)
   const [history, setHistory] = useLocalStorage<SessionRecord[]>('fl.history', [])
   const [blockCounts, setBlockCounts] = useLocalStorage<AppBlockCount[]>('fl.blockCounts', [])
+  const [urlBlockCounts, setUrlBlockCounts] = useLocalStorage<UrlBlockCount[]>(
+    'fl.urlBlockCounts',
+    [],
+  )
 
-  useBlockKillSync(setBlockCounts)
+  useAgentBlockStatsSync(setBlockCounts, setUrlBlockCounts)
 
   const resetStats = useCallback(() => {
     clearAllStatsStorage()
     setHistory([])
     setBlockCounts([])
-  }, [setHistory, setBlockCounts])
+    setUrlBlockCounts([])
+  }, [setHistory, setBlockCounts, setUrlBlockCounts])
 
   const recordFocus = useCallback(
     (focusMinutes: number) => {
@@ -287,7 +292,12 @@ export function HomePage() {
           />
         )}
         {view === 'stats' && (
-          <Stats history={history} blockCounts={blockCounts} onResetStats={resetStats} />
+          <Stats
+            history={history}
+            blockCounts={blockCounts}
+            urlBlockCounts={urlBlockCounts}
+            onResetStats={resetStats}
+          />
         )}
         {view === 'settings' && (
           <SettingsView settings={settings} onChange={setSettings} strictLocked={isStrictLocked} />

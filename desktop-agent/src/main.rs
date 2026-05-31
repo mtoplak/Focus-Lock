@@ -2,10 +2,14 @@ mod blocker;
 #[cfg(windows)]
 mod connections;
 mod discovery;
+mod dns;
+mod domains;
 mod hosts;
 mod icons;
 mod server;
 mod state;
+#[cfg(windows)]
+mod system_dns;
 
 use state::AppState;
 use tracing::{info, warn};
@@ -41,6 +45,9 @@ async fn main() -> anyhow::Result<()> {
         Err(e) => warn!("startup cleanup failed: {e}"),
     }
 
+    #[cfg(windows)]
+    system_dns::startup_cleanup();
+
     let state = AppState::new();
 
     let blocker_state = state.clone();
@@ -49,8 +56,10 @@ async fn main() -> anyhow::Result<()> {
     // Graceful shutdown: ensure hosts file gets cleaned on Ctrl+C.
     tokio::spawn(async move {
         if tokio::signal::ctrl_c().await.is_ok() {
-            info!("shutting down, cleaning hosts file");
+            info!("shutting down, cleaning hosts file and system DNS");
             let _ = hosts::remove();
+            #[cfg(windows)]
+            let _ = system_dns::restore_system_dns();
             std::process::exit(0);
         }
     });

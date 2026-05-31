@@ -1,4 +1,4 @@
-import type { AppBlockCount, SessionRecord } from '../types'
+import type { AppBlockCount, SessionRecord, UrlBlockCount } from '../types'
 
 export function formatMinutes(mins: number): string {
   if (mins < 60) return `${mins}m`
@@ -63,6 +63,10 @@ export function computePersonalBest(
 }
 
 export function topBlockedApps(counts: AppBlockCount[], limit = 5): AppBlockCount[] {
+  return [...counts].sort((a, b) => b.count - a.count).slice(0, limit)
+}
+
+export function topBlockedUrls(counts: UrlBlockCount[], limit = 5): UrlBlockCount[] {
   return [...counts].sort((a, b) => b.count - a.count).slice(0, limit)
 }
 

@@ -6,12 +6,14 @@ import {
   formatMinutes,
   formatShortDate,
   topBlockedApps,
+  topBlockedUrls,
 } from '../lib/statsHelpers'
-import type { AppBlockCount, SessionRecord } from '../types'
+import type { AppBlockCount, SessionRecord, UrlBlockCount } from '../types'
 
 interface StatsProps {
   history: SessionRecord[]
   blockCounts: AppBlockCount[]
+  urlBlockCounts: UrlBlockCount[]
   onResetStats: () => void
 }
 
@@ -50,7 +52,7 @@ const computeStreak = (history: SessionRecord[]) => {
   return streak
 }
 
-export function Stats({ history, blockCounts, onResetStats }: StatsProps) {
+export function Stats({ history, blockCounts, urlBlockCounts, onResetStats }: StatsProps) {
   const agent = useAgent()
   const [confirmResetOpen, setConfirmResetOpen] = useState(false)
   const today = isoDate(new Date())
@@ -64,6 +66,7 @@ export function Stats({ history, blockCounts, onResetStats }: StatsProps) {
   const longestStreak = computeLongestStreak(history)
   const personalBest = computePersonalBest(history)
   const topApps = topBlockedApps(blockCounts)
+  const topUrls = topBlockedUrls(urlBlockCounts)
 
   const last7 = getLast7Days()
   const last7Data = last7.map((d) => {
@@ -78,6 +81,7 @@ export function Stats({ history, blockCounts, onResetStats }: StatsProps) {
   )
   const activeDays = history.filter((r) => r.completedSessions > 0).length
   const maxBlockCount = Math.max(1, ...topApps.map((a) => a.count))
+  const maxUrlCount = Math.max(1, ...topUrls.map((u) => u.count))
 
   return (
     <div className="mx-auto w-full max-w-3xl">
@@ -194,7 +198,7 @@ export function Stats({ history, blockCounts, onResetStats }: StatsProps) {
         </dl>
       </section>
 
-      <section className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-6">
+      <section className="mb-6 rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-6">
         <h3 className="text-[15px] font-semibold tracking-tight text-[color:var(--color-ink)]">
           Most blocked apps
         </h3>
@@ -202,34 +206,35 @@ export function Stats({ history, blockCounts, onResetStats }: StatsProps) {
           Times the desktop agent closed an app during focus (saved on this device).
         </p>
 
-        {topApps.length === 0 ? (
-          <p className="text-[13px] text-[color:var(--color-ink-muted)]">
-            {agent.status === 'connected'
+        <BlockedCountList
+          items={topApps.map((a) => ({ key: a.key, label: a.label, count: a.count }))}
+          maxCount={maxBlockCount}
+          emptyMessage={
+            agent.status === 'connected'
               ? 'No blocked apps closed yet. Add apps on the Blocks tab and run a focus session.'
-              : 'Start the desktop agent to track blocked apps during focus.'}
-          </p>
-        ) : (
-          <ul className="space-y-3">
-            {topApps.map((app) => (
-              <li key={app.key}>
-                <div className="mb-1.5 flex items-baseline justify-between gap-3">
-                  <span className="truncate text-[13.5px] font-medium text-[color:var(--color-ink)]">
-                    {app.label}
-                  </span>
-                  <span className="shrink-0 font-mono text-[12px] tabular-nums text-[color:var(--color-ink-muted)]">
-                    {app.count}×
-                  </span>
-                </div>
-                <div className="h-2 overflow-hidden rounded-full bg-[color:var(--color-surface-2)]">
-                  <div
-                    className="h-full rounded-full bg-[color:var(--color-accent)]/70 transition-all"
-                    style={{ width: `${(app.count / maxBlockCount) * 100}%` }}
-                  />
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
+              : 'Start the desktop agent to track blocked apps during focus.'
+          }
+        />
+      </section>
+
+      <section className="mb-6 rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-6">
+        <h3 className="text-[15px] font-semibold tracking-tight text-[color:var(--color-ink)]">
+          Most blocked sites
+        </h3>
+        <p className="mt-1 mb-5 text-[12.5px] text-[color:var(--color-ink-muted)]">
+          DNS lookup attempts to blocked domains during focus (requires agent admin + DNS blocking).
+        </p>
+
+        <BlockedCountList
+          items={topUrls.map((u) => ({ key: u.key, label: u.label, count: u.count }))}
+          maxCount={maxUrlCount}
+          monoLabel
+          emptyMessage={
+            agent.status === 'connected'
+              ? 'No blocked site lookups yet. Add URLs on the Blocks tab, run focus as admin, and visit a blocked site.'
+              : 'Start the desktop agent to track blocked sites during focus.'
+          }
+        />
       </section>
 
       <div className="mt-8 flex flex-col items-start gap-2 border-t border-[color:var(--color-line)] pt-6">
@@ -241,7 +246,7 @@ export function Stats({ history, blockCounts, onResetStats }: StatsProps) {
           Reset all stats
         </button>
         <p className="text-[12px] text-[color:var(--color-ink-faint)]">
-          Clears focus history and blocked-app counts on this device only.
+          Clears focus history, blocked-app counts, and blocked-site counts on this device only.
         </p>
       </div>
 
@@ -286,12 +291,12 @@ function ResetStatsDialog({
           Reset all stats?
         </h3>
         <p id="reset-stats-desc" className="mt-2 text-[14px] leading-relaxed text-[color:var(--color-ink-muted)]">
-          This permanently deletes your focus history, streaks, personal best, and blocked-app
-          counts from this browser. It cannot be undone.
+          This permanently deletes your focus history, streaks, personal best, blocked-app counts,
+          and blocked-site counts from this browser. It cannot be undone.
         </p>
         <p className="mt-2 text-[12.5px] text-[color:var(--color-ink-faint)]">
           Settings, your block list, and sign-in are not affected. Restart the desktop agent to
-          clear its in-memory kill counters.
+          clear its in-memory counters.
         </p>
         <div className="mt-6 flex justify-end gap-2">
           <button
@@ -311,6 +316,49 @@ function ResetStatsDialog({
         </div>
       </div>
     </div>
+  )
+}
+
+function BlockedCountList({
+  items,
+  maxCount,
+  emptyMessage,
+  monoLabel = false,
+}: {
+  items: Array<{ key: string; label: string; count: number }>
+  maxCount: number
+  emptyMessage: string
+  monoLabel?: boolean
+}) {
+  if (items.length === 0) {
+    return <p className="text-[13px] text-[color:var(--color-ink-muted)]">{emptyMessage}</p>
+  }
+
+  return (
+    <ul className="space-y-3">
+      {items.map((item) => (
+        <li key={item.key}>
+          <div className="mb-1.5 flex items-baseline justify-between gap-3">
+            <span
+              className={`truncate text-[13.5px] font-medium text-[color:var(--color-ink)] ${
+                monoLabel ? 'font-mono text-[12.5px]' : ''
+              }`}
+            >
+              {item.label}
+            </span>
+            <span className="shrink-0 font-mono text-[12px] tabular-nums text-[color:var(--color-ink-muted)]">
+              {item.count}×
+            </span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-[color:var(--color-surface-2)]">
+            <div
+              className="h-full rounded-full bg-[color:var(--color-accent)]/70 transition-all"
+              style={{ width: `${(item.count / maxCount) * 100}%` }}
+            />
+          </div>
+        </li>
+      ))}
+    </ul>
   )
 }
 

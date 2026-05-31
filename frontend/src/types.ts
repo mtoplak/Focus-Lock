@@ -36,6 +36,14 @@ export interface AppBlockCount {
   count: number
 }
 
+/** Cumulative blocked URL DNS query counts (from desktop agent during focus). */
+export interface UrlBlockCount {
+  /** Normalized domain, e.g. youtube.com */
+  key: string
+  label: string
+  count: number
+}
+
 export const DEFAULT_SETTINGS: Settings = {
   focusMinutes: 25,
   shortBreakMinutes: 5,
