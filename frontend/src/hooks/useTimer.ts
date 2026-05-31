@@ -15,36 +15,106 @@ export interface UseTimerResult {
   completedFocusSessions: number
 }
 
+const STORAGE_KEY = 'fl.timer.v1'
+
+interface PersistedTimer {
+  mode: TimerMode
+  completedFocusSessions: number
+  totalSeconds: number
+  secondsLeft: number
+  // epoch ms when the current interval ends; null when paused/idle.
+  endsAt: number | null
+}
+
 const modeDurationMinutes = (mode: TimerMode, settings: Settings) => {
   if (mode === 'focus') return settings.focusMinutes
   if (mode === 'short-break') return settings.shortBreakMinutes
   return settings.longBreakMinutes
 }
 
+const loadPersisted = (settings: Settings): PersistedTimer => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw) as PersistedTimer
+      if (parsed && typeof parsed.mode === 'string') {
+        // Reconcile against wall clock: if the tab was closed mid-session,
+        // recompute remaining time. The transition effect handles the case
+        // where time fully elapsed (secondsLeft === 0).
+        if (parsed.endsAt !== null) {
+          const left = Math.max(0, Math.ceil((parsed.endsAt - Date.now()) / 1000))
+          return { ...parsed, secondsLeft: left }
+        }
+        return parsed
+      }
+    }
+  } catch {
+    // fall through to defaults
+  }
+  const seconds = settings.focusMinutes * 60
+  return {
+    mode: 'focus',
+    completedFocusSessions: 0,
+    totalSeconds: seconds,
+    secondsLeft: seconds,
+    endsAt: null,
+  }
+}
+
 export function useTimer(
   settings: Settings,
   onFocusComplete: (focusMinutes: number) => void,
 ): UseTimerResult {
-  const [mode, setModeState] = useState<TimerMode>('focus')
-  const [completedFocusSessions, setCompletedFocusSessions] = useState(0)
-  const [totalSeconds, setTotalSeconds] = useState(settings.focusMinutes * 60)
-  const [secondsLeft, setSecondsLeft] = useState(settings.focusMinutes * 60)
-  const [isRunning, setIsRunning] = useState(false)
+  const [hydrated] = useState(() => loadPersisted(settings))
+  const [mode, setModeState] = useState<TimerMode>(hydrated.mode)
+  const [completedFocusSessions, setCompletedFocusSessions] = useState(
+    hydrated.completedFocusSessions,
+  )
+  const [totalSeconds, setTotalSeconds] = useState(hydrated.totalSeconds)
+  const [secondsLeft, setSecondsLeft] = useState(hydrated.secondsLeft)
+  const [endsAt, setEndsAt] = useState<number | null>(hydrated.endsAt)
+
+  // endsAt mirror that we can mutate synchronously inside reset / pause /
+  // skip / start. The 250 ms tick interval reads from this ref, so when a
+  // control action clears endsAt, the next in-flight tick bails out before
+  // it can clobber secondsLeft with the old (still-running) value. Without
+  // this, pressing R while running races the tick and the reset visibly
+  // "doesn't happen".
+  const endsAtRef = useRef<number | null>(hydrated.endsAt)
+
+  const isRunning = endsAt !== null && secondsLeft > 0
   const onFocusCompleteRef = useRef(onFocusComplete)
   onFocusCompleteRef.current = onFocusComplete
 
+  // Persist on every change so a refresh restores exactly where we were.
+  useEffect(() => {
+    try {
+      const snap: PersistedTimer = {
+        mode,
+        completedFocusSessions,
+        totalSeconds,
+        secondsLeft,
+        endsAt,
+      }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(snap))
+    } catch {
+      // ignore quota / private-mode errors
+    }
+  }, [mode, completedFocusSessions, totalSeconds, secondsLeft, endsAt])
+
   const setMode = useCallback(
     (next: TimerMode) => {
-      setModeState(next)
       const seconds = modeDurationMinutes(next, settings) * 60
+      endsAtRef.current = null
+      setModeState(next)
       setTotalSeconds(seconds)
       setSecondsLeft(seconds)
-      setIsRunning(false)
+      setEndsAt(null)
     },
     [settings],
   )
 
-  // Keep totals fresh if user updates settings while idle
+  // Keep totals fresh if user updates settings while idle.
   useEffect(() => {
     if (isRunning) return
     const seconds = modeDurationMinutes(mode, settings) * 60
@@ -53,25 +123,39 @@ export function useTimer(
     setSecondsLeft(seconds)
   }, [settings, mode, isRunning, totalSeconds])
 
-  // Tick
+  // Tick — recompute from endsAt instead of decrementing. Survives tab
+  // throttling and refreshes without drift. Reads endsAt via ref so an
+  // in-flight tick after reset/pause sees the cleared value and bails out.
   useEffect(() => {
-    if (!isRunning) return
-    const id = window.setInterval(() => {
-      setSecondsLeft((s) => Math.max(0, s - 1))
-    }, 1000)
+    if (endsAt === null) return
+    const tick = () => {
+      const e = endsAtRef.current
+      if (e === null) return
+      const left = Math.max(0, Math.ceil((e - Date.now()) / 1000))
+      setSecondsLeft(left)
+    }
+    tick()
+    const id = window.setInterval(tick, 250)
     return () => window.clearInterval(id)
-  }, [isRunning])
+  }, [endsAt])
 
-  // Transition on hit zero
+  // Transition on hit zero.
   useEffect(() => {
-    if (secondsLeft > 0 || !isRunning) return
-    setIsRunning(false)
+    if (secondsLeft > 0 || endsAt === null) return
 
-    if (settings.notificationsEnabled) {
+    // If the interval finished while the tab was closed (endsAt comfortably
+    // in the past), skip the bell and notification — the user wasn't there
+    // to receive them, and don't auto-start the next interval either.
+    const silent = Date.now() - endsAt > 2000
+
+    endsAtRef.current = null
+    setEndsAt(null)
+
+    if (!silent && settings.notificationsEnabled) {
       void notifyTimer('end', mode)
     }
 
-    if (settings.soundEnabled) {
+    if (!silent && settings.soundEnabled) {
       try {
         const ctx = new (window.AudioContext ||
           (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)()
@@ -100,38 +184,61 @@ export function useTimer(
       setModeState(nextMode)
       setTotalSeconds(seconds)
       setSecondsLeft(seconds)
-      if (settings.autoStartBreaks) {
+      if (!silent && settings.autoStartBreaks) {
         if (settings.notificationsEnabled) void notifyTimer('start', nextMode)
-        setIsRunning(true)
+        const end = Date.now() + seconds * 1000
+        endsAtRef.current = end
+        setEndsAt(end)
       }
     } else {
       const seconds = settings.focusMinutes * 60
       setModeState('focus')
       setTotalSeconds(seconds)
       setSecondsLeft(seconds)
-      if (settings.autoStartFocus) {
+      if (!silent && settings.autoStartFocus) {
         if (settings.notificationsEnabled) void notifyTimer('start', 'focus')
-        setIsRunning(true)
+        const end = Date.now() + seconds * 1000
+        endsAtRef.current = end
+        setEndsAt(end)
       }
     }
-  }, [secondsLeft, isRunning, mode, settings, completedFocusSessions])
+  }, [secondsLeft, endsAt, mode, settings, completedFocusSessions])
 
   const start = useCallback(() => {
-    setIsRunning((prev) => {
-      if (!prev && settings.notificationsEnabled) {
-        void notifyTimer('start', mode)
-      }
-      return true
-    })
-  }, [mode, settings.notificationsEnabled])
-  const pause = useCallback(() => setIsRunning(false), [])
+    if (endsAtRef.current !== null) return // already running
+    if (settings.notificationsEnabled) {
+      void notifyTimer('start', mode)
+    }
+    const end = Date.now() + secondsLeft * 1000
+    endsAtRef.current = end
+    setEndsAt(end)
+  }, [mode, secondsLeft, settings.notificationsEnabled])
+
+  const pause = useCallback(() => {
+    const e = endsAtRef.current
+    if (e === null) return
+    // Freeze remaining seconds at pause time so the persisted snapshot is exact.
+    setSecondsLeft(Math.max(0, Math.ceil((e - Date.now()) / 1000)))
+    endsAtRef.current = null
+    setEndsAt(null)
+  }, [])
+
   const reset = useCallback(() => {
     const seconds = modeDurationMinutes(mode, settings) * 60
+    endsAtRef.current = null
     setTotalSeconds(seconds)
     setSecondsLeft(seconds)
-    setIsRunning(false)
+    setEndsAt(null)
   }, [mode, settings])
-  const skip = useCallback(() => setSecondsLeft(0), [])
+
+  const skip = useCallback(() => {
+    // Force the transition effect: zero seconds + endsAt in the past.
+    // Works whether we were running or paused.
+    const now = Date.now()
+    endsAtRef.current = now
+    setSecondsLeft(0)
+    setEndsAt(now)
+  }, [])
 
   return {
     mode,

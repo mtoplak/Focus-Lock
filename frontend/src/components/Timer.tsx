@@ -43,21 +43,22 @@ const buildCycle = (sessionsInCycle: number): CycleStep[] => {
 export function Timer({ timer, settings, task, onTaskChange, strictLocked = false }: TimerProps) {
   const { mode, setMode, secondsLeft, totalSeconds, isRunning, start, pause, reset, skip, completedFocusSessions } =
     timer
-  const [showInfo, setShowInfo] = useState(false)
-  const infoRef = useRef<HTMLDivElement | null>(null)
+  type PanelName = 'info' | 'shortcuts'
+  const [openPanel, setOpenPanel] = useState<PanelName | null>(null)
+  const panelGroupRef = useRef<HTMLDivElement | null>(null)
   const hideTimerRef = useRef<number | null>(null)
 
-  const openInfo = () => {
+  const openPanelNow = (name: PanelName) => {
     if (hideTimerRef.current !== null) {
       window.clearTimeout(hideTimerRef.current)
       hideTimerRef.current = null
     }
-    setShowInfo(true)
+    setOpenPanel(name)
   }
-  const scheduleHideInfo = () => {
+  const scheduleClosePanel = () => {
     if (hideTimerRef.current !== null) window.clearTimeout(hideTimerRef.current)
     hideTimerRef.current = window.setTimeout(() => {
-      setShowInfo(false)
+      setOpenPanel(null)
       hideTimerRef.current = null
     }, 150)
   }
@@ -70,12 +71,14 @@ export function Timer({ timer, settings, task, onTaskChange, strictLocked = fals
   )
 
   useEffect(() => {
-    if (!showInfo) return
+    if (openPanel === null) return
     const onDocClick = (e: MouseEvent) => {
-      if (infoRef.current && !infoRef.current.contains(e.target as Node)) setShowInfo(false)
+      if (panelGroupRef.current && !panelGroupRef.current.contains(e.target as Node)) {
+        setOpenPanel(null)
+      }
     }
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setShowInfo(false)
+      if (e.key === 'Escape') setOpenPanel(null)
     }
     document.addEventListener('mousedown', onDocClick)
     document.addEventListener('keydown', onKey)
@@ -83,7 +86,70 @@ export function Timer({ timer, settings, task, onTaskChange, strictLocked = fals
       document.removeEventListener('mousedown', onDocClick)
       document.removeEventListener('keydown', onKey)
     }
-  }, [showInfo])
+  }, [openPanel])
+
+  // Global keyboard shortcuts. Skip when the user is typing in a field, when
+  // a modifier is held (avoids clashing with browser shortcuts), and respect
+  // strict-mode locks the same way the on-screen buttons do.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null
+      if (
+        t &&
+        (t.tagName === 'INPUT' ||
+          t.tagName === 'TEXTAREA' ||
+          t.tagName === 'SELECT' ||
+          t.isContentEditable)
+      ) {
+        return
+      }
+      if (e.ctrlKey || e.metaKey || e.altKey) return
+
+      switch (e.key) {
+        case ' ':
+        case 'Spacebar':
+          // Space toggles start/pause. Pause is blocked by strict mode.
+          if (timer.isRunning) {
+            if (strictLocked) return
+            e.preventDefault()
+            timer.pause()
+          } else {
+            e.preventDefault()
+            timer.start()
+          }
+          break
+        case 'r':
+        case 'R':
+          if (strictLocked) return
+          e.preventDefault()
+          timer.reset()
+          break
+        case 's':
+        case 'S':
+          if (strictLocked) return
+          e.preventDefault()
+          timer.skip()
+          break
+        case '1':
+          if (strictLocked) return
+          e.preventDefault()
+          timer.setMode('focus')
+          break
+        case '2':
+          if (strictLocked) return
+          e.preventDefault()
+          timer.setMode('short-break')
+          break
+        case '3':
+          if (strictLocked) return
+          e.preventDefault()
+          timer.setMode('long-break')
+          break
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [timer, strictLocked])
 
   const progress = totalSeconds === 0 ? 0 : 1 - secondsLeft / totalSeconds
   const radius = 138
@@ -117,8 +183,8 @@ export function Timer({ timer, settings, task, onTaskChange, strictLocked = fals
         className="w-full max-w-md border-b border-[color:var(--color-line)] bg-transparent px-1 py-2 text-center text-[15px] text-[color:var(--color-ink)] placeholder:text-[color:var(--color-ink-faint)] focus:border-[color:var(--color-accent)] focus:outline-none"
       />
 
-      {/* mode tabs + info */}
-      <div className="relative flex items-center gap-2" ref={infoRef}>
+      {/* mode tabs + info icons */}
+      <div className="relative flex items-center gap-2" ref={panelGroupRef}>
         <div className="flex gap-1 rounded-full border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-1">
           {(['focus', 'short-break', 'long-break'] as TimerMode[]).map((m) => {
             const active = mode === m
@@ -140,19 +206,22 @@ export function Timer({ timer, settings, task, onTaskChange, strictLocked = fals
             )
           })}
         </div>
+
+        {/* (i) Pomodoro info */}
         <div
           className="relative"
-          onMouseEnter={openInfo}
-          onMouseLeave={scheduleHideInfo}
+          onMouseEnter={() => openPanelNow('info')}
+          onMouseLeave={scheduleClosePanel}
         >
           <button
             type="button"
-            onFocus={openInfo}
-            onBlur={scheduleHideInfo}
+            onFocus={() => openPanelNow('info')}
+            onBlur={scheduleClosePanel}
+            onClick={() => setOpenPanel((p) => (p === 'info' ? null : 'info'))}
             aria-label="How the Pomodoro timer works"
-            aria-expanded={showInfo}
+            aria-expanded={openPanel === 'info'}
             className={`flex h-7 w-7 items-center justify-center rounded-full border text-[color:var(--color-ink-muted)] transition ${
-              showInfo
+              openPanel === 'info'
                 ? 'border-[color:var(--color-line-strong)] bg-[color:var(--color-surface-2)] text-[color:var(--color-ink)]'
                 : 'border-[color:var(--color-line)] bg-[color:var(--color-surface)] hover:border-[color:var(--color-line-strong)] hover:text-[color:var(--color-ink)]'
             }`}
@@ -164,58 +233,169 @@ export function Timer({ timer, settings, task, onTaskChange, strictLocked = fals
             </svg>
           </button>
 
-        {showInfo && (
-          <div
-            role="dialog"
-            aria-label="How the Pomodoro timer works"
-            className="absolute top-[calc(100%+10px)] left-1/2 z-20 w-[320px] -translate-x-1/2 rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 text-left shadow-[0_8px_28px_rgba(0,0,0,0.08)]"
-          >
-            <div className="mb-2 flex items-center justify-between">
-              <h3 className="text-[13px] font-semibold tracking-tight text-[color:var(--color-ink)]">
-                How the Pomodoro timer works
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowInfo(false)}
-                aria-label="Close"
-                className="-mr-1 flex h-6 w-6 items-center justify-center rounded-md text-[color:var(--color-ink-faint)] transition hover:bg-[color:var(--color-surface-2)] hover:text-[color:var(--color-ink-muted)]"
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M18 6L6 18M6 6l12 12" />
-                </svg>
-              </button>
+          {openPanel === 'info' && (
+            <div
+              role="dialog"
+              aria-label="How the Pomodoro timer works"
+              className="absolute top-[calc(100%+10px)] left-1/2 z-20 w-[320px] -translate-x-1/2 rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 text-left shadow-[0_8px_28px_rgba(0,0,0,0.08)]"
+            >
+              <div className="mb-2 flex items-center justify-between">
+                <h3 className="text-[13px] font-semibold tracking-tight text-[color:var(--color-ink)]">
+                  How the Pomodoro timer works
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setOpenPanel(null)}
+                  aria-label="Close"
+                  className="-mr-1 flex h-6 w-6 items-center justify-center rounded-md text-[color:var(--color-ink-faint)] transition hover:bg-[color:var(--color-surface-2)] hover:text-[color:var(--color-ink-muted)]"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <ol className="space-y-2 text-[12.5px] leading-relaxed text-[color:var(--color-ink-muted)]">
+                <li className="flex gap-2.5">
+                  <span className="mt-0.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: MODE_COLOR.focus }} />
+                  <span>
+                    Focus for <span className="font-medium text-[color:var(--color-ink)]">{settings.focusMinutes} min</span>.
+                  </span>
+                </li>
+                <li className="flex gap-2.5">
+                  <span className="mt-0.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: MODE_COLOR['short-break'] }} />
+                  <span>
+                    Take a <span className="font-medium text-[color:var(--color-ink)]">{settings.shortBreakMinutes} min</span> short break.
+                  </span>
+                </li>
+                <li className="flex gap-2.5">
+                  <span className="mt-0.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-[color:var(--color-ink-fainter)]" />
+                  <span>
+                    Repeat <span className="font-medium text-[color:var(--color-ink)]">{sessionsInCycle}</span> times.
+                  </span>
+                </li>
+                <li className="flex gap-2.5">
+                  <span className="mt-0.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: MODE_COLOR['long-break'] }} />
+                  <span>
+                    Then a longer <span className="font-medium text-[color:var(--color-ink)]">{settings.longBreakMinutes} min</span> break before starting the next cycle.
+                  </span>
+                </li>
+              </ol>
+              <p className="mt-3 border-t border-[color:var(--color-line)] pt-2.5 text-[11.5px] text-[color:var(--color-ink-faint)]">
+                Tip: adjust durations and auto-start in Settings.
+              </p>
             </div>
-            <ol className="space-y-2 text-[12.5px] leading-relaxed text-[color:var(--color-ink-muted)]">
-              <li className="flex gap-2.5">
-                <span className="mt-0.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: MODE_COLOR.focus }} />
-                <span>
-                  Focus for <span className="font-medium text-[color:var(--color-ink)]">{settings.focusMinutes} min</span>.
-                </span>
-              </li>
-              <li className="flex gap-2.5">
-                <span className="mt-0.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: MODE_COLOR['short-break'] }} />
-                <span>
-                  Take a <span className="font-medium text-[color:var(--color-ink)]">{settings.shortBreakMinutes} min</span> short break.
-                </span>
-              </li>
-              <li className="flex gap-2.5">
-                <span className="mt-0.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-[color:var(--color-ink-fainter)]" />
-                <span>
-                  Repeat <span className="font-medium text-[color:var(--color-ink)]">{sessionsInCycle}</span> times.
-                </span>
-              </li>
-              <li className="flex gap-2.5">
-                <span className="mt-0.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: MODE_COLOR['long-break'] }} />
-                <span>
-                  Then a longer <span className="font-medium text-[color:var(--color-ink)]">{settings.longBreakMinutes} min</span> break before starting the next cycle.
-                </span>
-              </li>
-            </ol>
-            <p className="mt-3 border-t border-[color:var(--color-line)] pt-2.5 text-[11.5px] text-[color:var(--color-ink-faint)]">
-              Tip: adjust durations and auto-start in Settings.
-            </p>
-          </div>
-        )}
+          )}
+        </div>
+
+        {/* (⌨) Keyboard shortcuts */}
+        <div
+          className="relative"
+          onMouseEnter={() => openPanelNow('shortcuts')}
+          onMouseLeave={scheduleClosePanel}
+        >
+          <button
+            type="button"
+            onFocus={() => openPanelNow('shortcuts')}
+            onBlur={scheduleClosePanel}
+            onClick={() => setOpenPanel((p) => (p === 'shortcuts' ? null : 'shortcuts'))}
+            aria-label="Keyboard shortcuts"
+            aria-expanded={openPanel === 'shortcuts'}
+            className={`flex h-7 w-7 items-center justify-center rounded-full border text-[color:var(--color-ink-muted)] transition ${
+              openPanel === 'shortcuts'
+                ? 'border-[color:var(--color-line-strong)] bg-[color:var(--color-surface-2)] text-[color:var(--color-ink)]'
+                : 'border-[color:var(--color-line)] bg-[color:var(--color-surface)] hover:border-[color:var(--color-line-strong)] hover:text-[color:var(--color-ink)]'
+            }`}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="6" width="20" height="12" rx="2" />
+              <path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10" />
+            </svg>
+          </button>
+
+          {openPanel === 'shortcuts' && (
+            <div
+              role="dialog"
+              aria-label="Keyboard shortcuts"
+              className="absolute top-[calc(100%+10px)] left-1/2 z-20 w-[300px] -translate-x-1/2 rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 text-left shadow-[0_8px_28px_rgba(0,0,0,0.08)]"
+            >
+              <div className="mb-2 flex items-center justify-between">
+                <h3 className="text-[13px] font-semibold tracking-tight text-[color:var(--color-ink)]">
+                  Keyboard shortcuts
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setOpenPanel(null)}
+                  aria-label="Close"
+                  className="-mr-1 flex h-6 w-6 items-center justify-center rounded-md text-[color:var(--color-ink-faint)] transition hover:bg-[color:var(--color-surface-2)] hover:text-[color:var(--color-ink-muted)]"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <ul className="space-y-2 text-[12.5px] text-[color:var(--color-ink-muted)]">
+                <li className="flex items-center justify-between gap-3">
+                  <span>Start / Pause</span>
+                  <kbd className="rounded border border-[color:var(--color-line-strong)] bg-[color:var(--color-surface-2)] px-2 py-0.5 font-mono text-[10.5px] font-medium text-[color:var(--color-ink-soft)]">
+                    Space
+                  </kbd>
+                </li>
+                <li className="flex items-center justify-between gap-3">
+                  <span>Reset</span>
+                  <kbd className="rounded border border-[color:var(--color-line-strong)] bg-[color:var(--color-surface-2)] px-2 py-0.5 font-mono text-[10.5px] font-medium text-[color:var(--color-ink-soft)]">
+                    R
+                  </kbd>
+                </li>
+                <li className="flex items-center justify-between gap-3">
+                  <span>Skip</span>
+                  <kbd className="rounded border border-[color:var(--color-line-strong)] bg-[color:var(--color-surface-2)] px-2 py-0.5 font-mono text-[10.5px] font-medium text-[color:var(--color-ink-soft)]">
+                    S
+                  </kbd>
+                </li>
+                <li className="flex items-start justify-between gap-3">
+                  <span>Switch mode</span>
+                  <span className="flex shrink-0 gap-1">
+                    <kbd
+                      className="rounded border px-1.5 py-0.5 font-mono text-[10.5px] font-medium"
+                      style={{
+                        borderColor: MODE_COLOR.focus,
+                        color: MODE_COLOR.focus,
+                        background: `${MODE_COLOR.focus}14`,
+                      }}
+                      title="Focus"
+                    >
+                      1
+                    </kbd>
+                    <kbd
+                      className="rounded border px-1.5 py-0.5 font-mono text-[10.5px] font-medium"
+                      style={{
+                        borderColor: MODE_COLOR['short-break'],
+                        color: MODE_COLOR['short-break'],
+                        background: `${MODE_COLOR['short-break']}14`,
+                      }}
+                      title="Short break"
+                    >
+                      2
+                    </kbd>
+                    <kbd
+                      className="rounded border px-1.5 py-0.5 font-mono text-[10.5px] font-medium"
+                      style={{
+                        borderColor: MODE_COLOR['long-break'],
+                        color: MODE_COLOR['long-break'],
+                        background: `${MODE_COLOR['long-break']}14`,
+                      }}
+                      title="Long break"
+                    >
+                      3
+                    </kbd>
+                  </span>
+                </li>
+              </ul>
+              <p className="mt-3 border-t border-[color:var(--color-line)] pt-2.5 text-[11.5px] text-[color:var(--color-ink-faint)]">
+                Shortcuts are disabled while typing in a text field.
+              </p>
+            </div>
+          )}
         </div>
       </div>
 

@@ -34,6 +34,21 @@ frontend/
 └── tsconfig*.json
 ```
 
+## Keyboard shortcuts
+
+Bližnjice delujejo globalno na strani z časovnikom. Ko je fokus v `<input>`, `<textarea>` ali drugem urejevalnem polju (npr. polje "What are you working on?"), so bližnjice **onemogočene**, da ne motijo tipkanja. Bližnjice spoštujejo **strict mode** enako kot gumbi — kadar je seja zaklenjena, R / S / 1 / 2 / 3 in pavza nimajo učinka.
+
+| Tipka | Akcija |
+|-------|--------|
+| `Space` | Start / Pause |
+| `R` | Reset |
+| `S` | Skip |
+| `1` | Preklop na **Focus** |
+| `2` | Preklop na **Short break** |
+| `3` | Preklop na **Long break** |
+
+Bližnjice so vidne tudi v aplikaciji preko ikone tipkovnice (⌨) poleg modnih zavihkov.
+
 ## Authentication
 
 | Route | Purpose |

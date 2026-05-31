@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Focus Lock timer icon (maskable)">
+  <rect width="512" height="512" fill="#1a1917"/>
+  <circle cx="256" cy="256" r="118" fill="none" stroke="#2f2c27" stroke-width="26"/>
+  <circle cx="256" cy="256" r="118" fill="none" stroke="#2563eb" stroke-width="26" stroke-linecap="round" stroke-dasharray="741.5" stroke-dashoffset="185.4" transform="rotate(-90 256 256)"/>
+  <line x1="256" y1="256" x2="306" y2="206" stroke="#fafaf7" stroke-width="16" stroke-linecap="round"/>
+  <line x1="256" y1="256" x2="256" y2="188" stroke="#fafaf7" stroke-width="16" stroke-linecap="round"/>
+  <circle cx="256" cy="256" r="11" fill="#fafaf7"/>
+</svg>
