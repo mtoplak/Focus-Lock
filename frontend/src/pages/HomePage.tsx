@@ -5,6 +5,7 @@ import { useAgentSync } from '../hooks/useAgent'
 import { useTimer } from '../hooks/useTimer'
 import { useVoiceControl } from '../hooks/useVoiceControl'
 import { useAmbient } from '../hooks/useAmbient'
+import { useWakeLock } from '../hooks/useWakeLock'
 import { VoiceControl } from '../components/VoiceControl'
 import { AmbientPlayer } from '../components/AmbientPlayer'
 import { Timer } from '../components/Timer'
@@ -168,6 +169,9 @@ export function HomePage() {
 
   useAgentSync(blocked, timer.mode === 'focus' && timer.isRunning)
 
+  // Keep the screen awake during a running focus session.
+  const screenAwake = useWakeLock(timer.mode === 'focus' && timer.isRunning)
+
   return (
     <div className="flex min-h-dvh bg-[color:var(--color-canvas)] text-[color:var(--color-ink)] md:h-dvh md:min-h-0 md:overflow-hidden">
       <aside className="hidden w-60 shrink-0 border-r border-[color:var(--color-line)] px-5 py-7 md:flex md:flex-col">
@@ -283,6 +287,7 @@ export function HomePage() {
               task={task}
               onTaskChange={setTask}
               strictLocked={isStrictLocked}
+              screenAwake={screenAwake}
             />
           </div>
         )}

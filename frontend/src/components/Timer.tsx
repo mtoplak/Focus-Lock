@@ -8,6 +8,8 @@ interface TimerProps {
   task: string
   onTaskChange: (task: string) => void
   strictLocked?: boolean
+  /** Screen Wake Lock is currently held — display stays awake. */
+  screenAwake?: boolean
 }
 
 const MODE_LABELS: Record<TimerMode, string> = {
@@ -40,7 +42,7 @@ const buildCycle = (sessionsInCycle: number): CycleStep[] => {
   return steps
 }
 
-export function Timer({ timer, settings, task, onTaskChange, strictLocked = false }: TimerProps) {
+export function Timer({ timer, settings, task, onTaskChange, strictLocked = false, screenAwake = false }: TimerProps) {
   const { mode, setMode, secondsLeft, totalSeconds, isRunning, start, pause, reset, skip, completedFocusSessions } =
     timer
   type PanelName = 'info' | 'shortcuts'
@@ -442,6 +444,28 @@ export function Timer({ timer, settings, task, onTaskChange, strictLocked = fals
               'Ready'
             )}
           </span>
+          {screenAwake && (
+            <span
+              className="mt-2 inline-flex items-center gap-1 text-[10px] tracking-wide text-[color:var(--color-ink-faint)]"
+              title="Screen stays awake during this focus session"
+              aria-label="Screen stays awake"
+            >
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="4" />
+                <path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" />
+              </svg>
+              Screen on
+            </span>
+          )}
         </div>
       </div>
 
