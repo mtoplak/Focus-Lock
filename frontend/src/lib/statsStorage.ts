@@ -9,15 +9,33 @@ export type AgentBlockSnapshot = {
   url: Record<string, number>
 }
 
-export function clearAllStatsStorage(): void {
+export function clearDisplayedStatsStorage(): void {
   try {
     localStorage.removeItem(STATS_HISTORY_KEY)
     localStorage.removeItem(STATS_BLOCK_COUNTS_KEY)
     localStorage.removeItem(STATS_URL_BLOCK_COUNTS_KEY)
+  } catch {
+    // ignore
+  }
+}
+
+/** Clears displayed stats and all agent sync baselines. */
+export function clearAllStatsStorage(): void {
+  clearDisplayedStatsStorage()
+  try {
     localStorage.removeItem(STATS_AGENT_SNAPSHOT_KEY)
   } catch {
     // ignore
   }
+}
+
+/**
+ * Reset on-device stats while keeping the agent delta baseline aligned so
+ * cumulative agent counters are not re-imported on the next poll.
+ */
+export function resetDisplayedStatsWithBaseline(baseline: AgentBlockSnapshot): void {
+  clearDisplayedStatsStorage()
+  saveAgentBlockSnapshot(baseline)
 }
 
 export function loadAgentBlockSnapshot(): AgentBlockSnapshot {

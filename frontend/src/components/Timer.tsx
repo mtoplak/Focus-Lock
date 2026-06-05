@@ -43,8 +43,21 @@ const buildCycle = (sessionsInCycle: number): CycleStep[] => {
 }
 
 export function Timer({ timer, settings, task, onTaskChange, strictLocked = false, screenAwake = false }: TimerProps) {
-  const { mode, setMode, secondsLeft, totalSeconds, isRunning, start, pause, reset, skip, completedFocusSessions } =
-    timer
+  const {
+    mode,
+    setMode,
+    secondsLeft,
+    totalSeconds,
+    isRunning,
+    start,
+    pause,
+    reset,
+    resetCycle,
+    skip,
+    completedFocusSessions,
+    completedInCycle,
+    canResetCycle,
+  } = timer
   type PanelName = 'info' | 'shortcuts'
   const [openPanel, setOpenPanel] = useState<PanelName | null>(null)
   const panelGroupRef = useRef<HTMLDivElement | null>(null)
@@ -158,7 +171,6 @@ export function Timer({ timer, settings, task, onTaskChange, strictLocked = fals
   const circumference = 2 * Math.PI * radius
   const dashOffset = circumference * (1 - progress)
   const sessionsInCycle = settings.sessionsUntilLongBreak
-  const completedInCycle = completedFocusSessions % sessionsInCycle
   const modeColor = MODE_COLOR[mode]
 
   const cycle = buildCycle(sessionsInCycle)
@@ -564,12 +576,29 @@ export function Timer({ timer, settings, task, onTaskChange, strictLocked = fals
             Next: <span className="text-[color:var(--color-ink-soft)]">{nextLabel}</span>
           </span>
         </div>
-        <div className="text-[11.5px] text-[color:var(--color-ink-faint)]">
-          {completedFocusSessions === 0
-            ? 'Start your first session'
-            : `${completedFocusSessions} ${
-                completedFocusSessions === 1 ? 'session' : 'sessions'
-              } today`}
+        <div className="flex flex-col items-center gap-1">
+          <div className="text-[11.5px] text-[color:var(--color-ink-faint)]">
+            {completedFocusSessions === 0
+              ? 'Start your first session'
+              : `${completedFocusSessions} ${
+                  completedFocusSessions === 1 ? 'session' : 'sessions'
+                } today`}
+          </div>
+          {canResetCycle && (
+            <button
+              type="button"
+              onClick={resetCycle}
+              disabled={strictLocked}
+              title={
+                strictLocked
+                  ? 'Locked by strict mode'
+                  : 'Start a new Pomodoro cycle from Focus 1'
+              }
+              className="text-[11.5px] text-[color:var(--color-ink-faint)] underline decoration-[color:var(--color-line-strong)] underline-offset-2 transition hover:text-[color:var(--color-ink-muted)] disabled:cursor-not-allowed disabled:no-underline disabled:opacity-40"
+            >
+              Reset cycle
+            </button>
+          )}
         </div>
       </div>
     </div>

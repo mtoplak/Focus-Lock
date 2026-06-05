@@ -15,7 +15,8 @@ import { SettingsView } from '../components/SettingsView'
 import { UserMenu } from '../components/UserMenu'
 import type { AppBlockCount, BlockedItem, SessionRecord, Settings, UrlBlockCount } from '../types'
 import { useAgentBlockStatsSync } from '../hooks/useBlockKillSync'
-import { clearAllStatsStorage } from '../lib/statsStorage'
+import { resetDisplayedStatsWithBaseline } from '../lib/statsStorage'
+import { fetchAgentBlockBaseline, getCachedAgentState } from '../hooks/useAgent'
 import { DEFAULT_BLOCKED, DEFAULT_SETTINGS } from '../types'
 
 type View = 'timer' | 'block' | 'stats' | 'settings'
@@ -96,10 +97,22 @@ export function HomePage() {
   useAgentBlockStatsSync(setBlockCounts, setUrlBlockCounts)
 
   const resetStats = useCallback(() => {
-    clearAllStatsStorage()
+    // Align the delta baseline with the agent's cumulative counters before
+    // clearing displayed stats — otherwise the next /status poll re-imports
+    // every URL/app block count as a "new" delta.
+    const cached = getCachedAgentState()
+    const immediate = {
+      kill: cached.status === 'connected' ? (cached.killCounts ?? {}) : {},
+      url: cached.status === 'connected' ? (cached.urlBlockCounts ?? {}) : {},
+    }
+    resetDisplayedStatsWithBaseline(immediate)
     setHistory([])
     setBlockCounts([])
     setUrlBlockCounts([])
+
+    void fetchAgentBlockBaseline().then((baseline) => {
+      resetDisplayedStatsWithBaseline(baseline)
+    })
   }, [setHistory, setBlockCounts, setUrlBlockCounts])
 
   const recordFocus = useCallback(

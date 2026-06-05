@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Settings, TimerMode } from '../types'
 import { notifyTimer } from '../lib/notify'
+import {
+  clearTimerEndInSw,
+  registerTimerSwResyncListener,
+  scheduleTimerEndInSw,
+} from '../lib/timerSwSync'
 
 export interface UseTimerResult {
   mode: TimerMode
@@ -11,8 +16,12 @@ export interface UseTimerResult {
   start: () => void
   pause: () => void
   reset: () => void
+  resetCycle: () => void
   skip: () => void
   completedFocusSessions: number
+  /** Completed focus intervals in the current Pomodoro cycle (0 … sessionsUntilLongBreak − 1). */
+  completedInCycle: number
+  canResetCycle: boolean
 }
 
 const STORAGE_KEY = 'fl.timer.v1'
@@ -20,6 +29,8 @@ const STORAGE_KEY = 'fl.timer.v1'
 interface PersistedTimer {
   mode: TimerMode
   completedFocusSessions: number
+  /** Sessions already completed when the current cycle was last reset. */
+  cycleOffset: number
   totalSeconds: number
   secondsLeft: number
   // epoch ms when the current interval ends; null when paused/idle.
@@ -41,11 +52,12 @@ const loadPersisted = (settings: Settings): PersistedTimer => {
         // Reconcile against wall clock: if the tab was closed mid-session,
         // recompute remaining time. The transition effect handles the case
         // where time fully elapsed (secondsLeft === 0).
+        const cycleOffset = parsed.cycleOffset ?? 0
         if (parsed.endsAt !== null) {
           const left = Math.max(0, Math.ceil((parsed.endsAt - Date.now()) / 1000))
-          return { ...parsed, secondsLeft: left }
+          return { ...parsed, cycleOffset, secondsLeft: left }
         }
-        return parsed
+        return { ...parsed, cycleOffset }
       }
     }
   } catch {
@@ -55,6 +67,7 @@ const loadPersisted = (settings: Settings): PersistedTimer => {
   return {
     mode: 'focus',
     completedFocusSessions: 0,
+    cycleOffset: 0,
     totalSeconds: seconds,
     secondsLeft: seconds,
     endsAt: null,
@@ -70,6 +83,7 @@ export function useTimer(
   const [completedFocusSessions, setCompletedFocusSessions] = useState(
     hydrated.completedFocusSessions,
   )
+  const [cycleOffset, setCycleOffset] = useState(hydrated.cycleOffset ?? 0)
   const [totalSeconds, setTotalSeconds] = useState(hydrated.totalSeconds)
   const [secondsLeft, setSecondsLeft] = useState(hydrated.secondsLeft)
   const [endsAt, setEndsAt] = useState<number | null>(hydrated.endsAt)
@@ -86,12 +100,47 @@ export function useTimer(
   const onFocusCompleteRef = useRef(onFocusComplete)
   onFocusCompleteRef.current = onFocusComplete
 
+  const settingsRef = useRef(settings)
+  settingsRef.current = settings
+
+  // Keep the service worker's end-of-interval alarm in sync with persisted state.
+  useEffect(() => {
+    if (
+      endsAt !== null &&
+      secondsLeft > 0 &&
+      settings.notificationsEnabled
+    ) {
+      scheduleTimerEndInSw({
+        endsAt,
+        mode,
+        notificationsEnabled: settings.notificationsEnabled,
+      })
+    } else {
+      clearTimerEndInSw()
+    }
+  }, [endsAt, mode, secondsLeft, settings.notificationsEnabled])
+
+  useEffect(() => {
+    return registerTimerSwResyncListener(() => {
+      const e = endsAtRef.current
+      if (e === null) return null
+      const left = Math.max(0, Math.ceil((e - Date.now()) / 1000))
+      if (left <= 0) return null
+      return {
+        endsAt: e,
+        mode: mode,
+        notificationsEnabled: settingsRef.current.notificationsEnabled,
+      }
+    })
+  }, [mode])
+
   // Persist on every change so a refresh restores exactly where we were.
   useEffect(() => {
     try {
       const snap: PersistedTimer = {
         mode,
         completedFocusSessions,
+        cycleOffset,
         totalSeconds,
         secondsLeft,
         endsAt,
@@ -100,7 +149,7 @@ export function useTimer(
     } catch {
       // ignore quota / private-mode errors
     }
-  }, [mode, completedFocusSessions, totalSeconds, secondsLeft, endsAt])
+  }, [mode, completedFocusSessions, cycleOffset, totalSeconds, secondsLeft, endsAt])
 
   const setMode = useCallback(
     (next: TimerMode) => {
@@ -147,6 +196,10 @@ export function useTimer(
     // in the past), skip the bell and notification — the user wasn't there
     // to receive them, and don't auto-start the next interval either.
     const silent = Date.now() - endsAt > 2000
+
+    // Cancel the SW alarm first so we don't double-notify when the page is
+    // in the foreground; the SW may already have fired if we were backgrounded.
+    clearTimerEndInSw()
 
     endsAtRef.current = null
     setEndsAt(null)
@@ -240,6 +293,22 @@ export function useTimer(
     setEndsAt(now)
   }, [])
 
+  const completedInCycle =
+    (completedFocusSessions - cycleOffset) % settings.sessionsUntilLongBreak
+
+  const canResetCycle = completedInCycle > 0 || mode !== 'focus'
+
+  const resetCycle = useCallback(() => {
+    clearTimerEndInSw()
+    endsAtRef.current = null
+    setEndsAt(null)
+    setCycleOffset(completedFocusSessions)
+    setModeState('focus')
+    const seconds = settings.focusMinutes * 60
+    setTotalSeconds(seconds)
+    setSecondsLeft(seconds)
+  }, [completedFocusSessions, settings.focusMinutes])
+
   return {
     mode,
     setMode,
@@ -249,7 +318,10 @@ export function useTimer(
     start,
     pause,
     reset,
+    resetCycle,
     skip,
     completedFocusSessions,
+    completedInCycle,
+    canResetCycle,
   }
 }

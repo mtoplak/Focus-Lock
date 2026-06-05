@@ -16,8 +16,14 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       registerType: 'autoUpdate',
       includeAssets: ['pwa-icon.svg', 'pwa-icon-maskable.svg', 'favicon.svg'],
+      injectManifest: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+      },
       manifest: {
         id: '/',
         name: 'Focus Lock — Pomodoro timer with distraction blocking',
@@ -72,35 +78,6 @@ export default defineConfig({
             short_name: 'Stats',
             description: 'Today’s focus stats',
             url: '/?view=stats',
-          },
-        ],
-      },
-      workbox: {
-        // Precache everything that ships with the build — JS, CSS, HTML,
-        // icons, images, fonts. These are content-hashed by Vite, so a fresh
-        // build automatically invalidates the cache.
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
-        cleanupOutdatedCaches: true,
-        navigateFallback: '/index.html',
-        runtimeCaching: [
-          // Google Fonts CSS — small, changes rarely.
-          {
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-            handler: 'StaleWhileRevalidate',
-            options: {
-              cacheName: 'google-fonts-stylesheets',
-              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
-            },
-          },
-          // Google Fonts font files — immutable URLs, fine to CacheFirst.
-          {
-            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-fonts-webfonts',
-              expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 365 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
           },
         ],
       },

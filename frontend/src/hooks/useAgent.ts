@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import type { AgentBlockSnapshot } from '../lib/statsStorage'
 import type { BlockedItem } from '../types'
 
 const AGENT_URL = 'http://127.0.0.1:7777'
@@ -88,6 +89,32 @@ const stopPolling = () => {
   if (pollersAttached === 0 && pollHandle !== null) {
     window.clearInterval(pollHandle)
     pollHandle = null
+  }
+}
+
+export function getCachedAgentState(): AgentState {
+  return cachedState
+}
+
+/** Current cumulative block/kill totals from the agent (for stats reset baseline). */
+export async function fetchAgentBlockBaseline(): Promise<AgentBlockSnapshot> {
+  try {
+    const res = await fetch(`${AGENT_URL}/status`, { method: 'GET' })
+    if (!res.ok) throw new Error(`status ${res.status}`)
+    const body = (await res.json()) as {
+      killCounts?: Record<string, number>
+      urlBlockCounts?: Record<string, number>
+    }
+    return {
+      kill: body.killCounts ?? {},
+      url: body.urlBlockCounts ?? {},
+    }
+  } catch {
+    const cached = cachedState
+    return {
+      kill: cached.killCounts ?? {},
+      url: cached.urlBlockCounts ?? {},
+    }
   }
 }
 
