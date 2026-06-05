@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import type { Settings } from '../types'
 import { DEFAULT_SETTINGS } from '../types'
 import { ensureNotificationPermission, notificationsSupported } from '../lib/notify'
@@ -194,25 +195,30 @@ function Stepper({
   const clamp = (v: number) => Math.min(max, Math.max(min, v))
   const dec = () => onChange(clamp(value - step))
   const inc = () => onChange(clamp(value + step))
+  const inputId = useId()
 
   return (
     <div className={wide ? 'flex items-center justify-between gap-4' : ''}>
-      <div className="mb-1.5 text-[11.5px] font-medium tracking-wide text-[color:var(--color-ink-muted)]">
+      <label
+        htmlFor={inputId}
+        className="mb-1.5 block text-[11.5px] font-medium tracking-wide text-[color:var(--color-ink-muted)]"
+      >
         {label}
-      </div>
+      </label>
       <div className={`inline-flex items-center rounded-lg border border-[color:var(--color-line)] bg-[color:var(--color-canvas)] ${wide ? '' : ''}`}>
         <button
           type="button"
           onClick={dec}
           disabled={value <= min}
           className="flex h-8 w-7 cursor-pointer items-center justify-center text-[color:var(--color-ink-muted)] transition hover:text-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-30"
-          aria-label="Decrease"
+          aria-label={`Decrease ${label.toLowerCase()}`}
         >
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
             <path d="M5 12h14" />
           </svg>
         </button>
         <input
+          id={inputId}
           type="number"
           value={value}
           min={min}
@@ -228,9 +234,9 @@ function Stepper({
           onClick={inc}
           disabled={value >= max}
           className="flex h-8 w-7 cursor-pointer items-center justify-center text-[color:var(--color-ink-muted)] transition hover:text-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-30"
-          aria-label="Increase"
+          aria-label={`Increase ${label.toLowerCase()}`}
         >
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
             <path d="M12 5v14M5 12h14" />
           </svg>
         </button>
@@ -252,11 +258,13 @@ function ToggleRow({
   onChange: (v: boolean) => void
   disabled?: boolean
 }) {
+  const labelId = useId()
+  const descId = useId()
   return (
     <div className="flex items-start justify-between gap-4 py-4 first:pt-2 last:pb-2">
       <div className="flex-1">
-        <div className="text-[14px] font-medium text-[color:var(--color-ink)]">{label}</div>
-        <div className="mt-0.5 text-[12.5px] text-[color:var(--color-ink-muted)]">
+        <div id={labelId} className="text-[14px] font-medium text-[color:var(--color-ink)]">{label}</div>
+        <div id={descId} className="mt-0.5 text-[12.5px] text-[color:var(--color-ink-muted)]">
           {description}
         </div>
       </div>
@@ -264,6 +272,8 @@ function ToggleRow({
         type="button"
         role="switch"
         aria-checked={checked}
+        aria-labelledby={labelId}
+        aria-describedby={descId}
         disabled={disabled}
         onClick={() => onChange(!checked)}
         className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition-colors duration-200 ${

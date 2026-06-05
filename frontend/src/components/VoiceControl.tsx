@@ -56,6 +56,7 @@ export function VoiceControl({ voice, placement = 'sidebar' }: VoiceControlProps
             strokeWidth="1.8"
             strokeLinecap="round"
             strokeLinejoin="round"
+            aria-hidden="true"
           >
             <path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z" />
             <path d="M19 11v1a7 7 0 0 1-14 0v-1" />
@@ -68,14 +69,16 @@ export function VoiceControl({ voice, placement = 'sidebar' }: VoiceControlProps
   const statusClass = voice.errorMessage
     ? 'text-amber-700 dark:text-amber-300'
     : voice.lastMatch
-      ? 'text-[color:var(--color-success)]'
+      ? 'text-[color:var(--color-success-strong)]'
       : 'text-[color:var(--color-ink-muted)]'
 
   if (isToolbar) {
     return (
       <div className="flex max-w-[9.5rem] items-center gap-2 sm:max-w-[11rem]">
         {micButton}
-        <p className={`min-w-0 truncate text-[11px] leading-tight ${statusClass}`}>{statusLabel}</p>
+        <p role="status" className={`min-w-0 truncate text-[11px] leading-tight ${statusClass}`}>
+          {statusLabel}
+        </p>
       </div>
     )
   }
@@ -88,7 +91,9 @@ export function VoiceControl({ voice, placement = 'sidebar' }: VoiceControlProps
       <div className="flex items-start gap-3 px-1">
         {micButton}
         <div className="min-w-0 flex-1 pt-1.5">
-          <p className={`text-[12.5px] leading-snug ${statusClass}`}>{statusLabel}</p>
+          <p role="status" className={`text-[12.5px] leading-snug ${statusClass}`}>
+            {statusLabel}
+          </p>
           {voice.lastTranscript && voice.status !== 'listening' && (
             <p className="mt-1 truncate font-mono text-[10px] text-[color:var(--color-ink-faint)]">
               “{voice.lastTranscript.trim()}”

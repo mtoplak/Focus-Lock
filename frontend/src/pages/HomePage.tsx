@@ -187,6 +187,10 @@ export function HomePage() {
 
   return (
     <div className="flex min-h-dvh bg-[color:var(--color-canvas)] text-[color:var(--color-ink)] md:h-dvh md:min-h-0 md:overflow-hidden">
+      <a href="#main-content" className="skip-link">
+        Skip to main content
+      </a>
+      <h1 className="sr-only">Focus Lock</h1>
       <aside className="hidden w-60 shrink-0 border-r border-[color:var(--color-line)] px-5 py-7 md:flex md:flex-col">
         <div className="mb-9 flex items-center gap-2.5 px-2">
           <div className="flex h-7 w-7 items-center justify-center rounded-md bg-[color:var(--color-ink)] shadow-[0_1px_2px_rgba(0,0,0,0.12)]">
@@ -200,7 +204,7 @@ export function HomePage() {
           </span>
         </div>
 
-        <nav className="flex flex-1 flex-col gap-0.5">
+        <nav aria-label="Primary" className="flex flex-1 flex-col gap-0.5">
           {NAV.map((item) => {
             const active = view === item.id
             return (
@@ -208,13 +212,14 @@ export function HomePage() {
                 key={item.id}
                 type="button"
                 onClick={() => setView(item.id)}
+                aria-current={active ? 'page' : undefined}
                 className={`flex cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 text-[13.5px] font-medium transition ${
                   active
                     ? 'bg-[color:var(--color-surface-2)] text-[color:var(--color-ink)]'
                     : 'text-[color:var(--color-ink-muted)] hover:bg-[color:var(--color-surface-2)]/60 hover:text-[color:var(--color-ink-soft)]'
                 }`}
               >
-                <span className={active ? 'text-[color:var(--color-ink)]' : ''}>
+                <span className={active ? 'text-[color:var(--color-ink)]' : ''} aria-hidden="true">
                   {item.icon}
                 </span>
                 <span className="flex-1 text-left">{item.label}</span>
@@ -226,7 +231,7 @@ export function HomePage() {
         <AmbientPlayer ambient={ambient} />
       </aside>
 
-      <div className="fixed inset-x-0 top-0 z-20 flex items-center justify-between gap-2 border-b border-[color:var(--color-line)] bg-[color:var(--color-canvas)]/90 px-4 py-3 backdrop-blur-md md:hidden">
+      <header className="fixed inset-x-0 top-0 z-20 flex items-center justify-between gap-2 border-b border-[color:var(--color-line)] bg-[color:var(--color-canvas)]/90 px-4 py-3 backdrop-blur-md md:hidden">
         <div className="flex min-w-0 items-center gap-2">
           <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[color:var(--color-ink)]">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
@@ -238,29 +243,32 @@ export function HomePage() {
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           {voice.enabled && <VoiceControl voice={voice} placement="toolbar" />}
-          <nav className="flex gap-0.5">
+          <nav aria-label="Primary" className="flex gap-0.5">
             {NAV.map((item) => (
               <button
                 key={item.id}
                 type="button"
                 onClick={() => setView(item.id)}
                 aria-label={item.label}
+                aria-current={view === item.id ? 'page' : undefined}
                 className={`cursor-pointer rounded-md p-2 transition ${
                   view === item.id
                     ? 'bg-[color:var(--color-surface-2)] text-[color:var(--color-ink)]'
                     : 'text-[color:var(--color-ink-muted)]'
                 }`}
               >
-                {item.icon}
+                <span aria-hidden="true">{item.icon}</span>
               </button>
             ))}
           </nav>
           <UserMenu />
         </div>
-      </div>
+      </header>
 
       <main
-        className={`relative flex-1 px-5 pt-20 pb-16 md:px-12 md:pt-10 md:pb-10 ${
+        id="main-content"
+        tabIndex={-1}
+        className={`relative flex-1 px-5 pt-20 pb-16 outline-none md:px-12 md:pt-10 md:pb-10 ${
           (view === 'timer' || view === 'block') && !isStrictLocked
             ? 'overflow-y-auto md:overflow-hidden'
             : 'overflow-y-auto'

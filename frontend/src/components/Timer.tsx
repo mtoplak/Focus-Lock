@@ -30,6 +30,17 @@ const formatTime = (totalSeconds: number) => {
   return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
 }
 
+// Spoken form of the remaining time for screen readers (the digit display is
+// hidden from them via aria-hidden).
+const spokenTime = (totalSeconds: number) => {
+  const m = Math.floor(totalSeconds / 60)
+  const s = totalSeconds % 60
+  const parts: string[] = []
+  if (m > 0) parts.push(`${m} minute${m === 1 ? '' : 's'}`)
+  parts.push(`${s} second${s === 1 ? '' : 's'}`)
+  return parts.join(' ')
+}
+
 type CycleStep = { kind: TimerMode }
 
 const buildCycle = (sessionsInCycle: number): CycleStep[] => {
@@ -189,17 +200,23 @@ export function Timer({ timer, settings, task, onTaskChange, strictLocked = fals
 
   return (
     <div className="flex w-full max-w-xl flex-col items-center gap-8">
+      <h2 className="sr-only">Focus timer</h2>
       <input
         type="text"
         value={task}
         onChange={(e) => onTaskChange(e.target.value)}
         placeholder="What are you working on?"
+        aria-label="Current task"
         className="w-full max-w-md border-b border-[color:var(--color-line)] bg-transparent px-1 py-2 text-center text-[15px] text-[color:var(--color-ink)] placeholder:text-[color:var(--color-ink-faint)] focus:border-[color:var(--color-accent)] focus:outline-none"
       />
 
       {/* mode tabs + info icons */}
       <div className="relative flex items-center gap-2" ref={panelGroupRef}>
-        <div className="flex gap-1 rounded-full border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-1">
+        <div
+          role="group"
+          aria-label="Timer mode"
+          className="flex gap-1 rounded-full border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-1"
+        >
           {(['focus', 'short-break', 'long-break'] as TimerMode[]).map((m) => {
             const active = mode === m
             return (
@@ -208,6 +225,7 @@ export function Timer({ timer, settings, task, onTaskChange, strictLocked = fals
                 type="button"
                 onClick={() => setMode(m)}
                 disabled={strictLocked}
+                aria-pressed={active}
                 title={strictLocked ? 'Locked by strict mode' : undefined}
                 className={`rounded-full px-4 py-1.5 text-[13px] font-medium transition ${
                   active
@@ -415,7 +433,7 @@ export function Timer({ timer, settings, task, onTaskChange, strictLocked = fals
 
       {/* ring + numerals */}
       <div className="relative">
-        <svg width="320" height="320" viewBox="0 0 320 320" className="-rotate-90">
+        <svg width="320" height="320" viewBox="0 0 320 320" className="-rotate-90" aria-hidden="true" focusable="false">
           <circle
             cx="160"
             cy="160"
@@ -437,17 +455,30 @@ export function Timer({ timer, settings, task, onTaskChange, strictLocked = fals
             className="transition-[stroke-dashoffset] duration-700 ease-out"
           />
         </svg>
-        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+        <div
+          className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center"
+          role="timer"
+          aria-label={`${MODE_LABELS[mode]}: ${spokenTime(secondsLeft)} remaining, ${
+            isRunning ? 'running' : 'paused'
+          }`}
+        >
           <span
             className="text-[11px] font-medium tracking-[0.18em] uppercase"
             style={{ color: modeColor }}
+            aria-hidden="true"
           >
             {MODE_LABELS[mode]}
           </span>
-          <span className="mt-1.5 font-mono text-[78px] leading-none font-medium tabular-nums tracking-tight text-[color:var(--color-ink)]">
+          <span
+            className="mt-1.5 font-mono text-[78px] leading-none font-medium tabular-nums tracking-tight text-[color:var(--color-ink)]"
+            aria-hidden="true"
+          >
             {formatTime(secondsLeft)}
           </span>
-          <span className="mt-3 text-[12px] tracking-wide text-[color:var(--color-ink-faint)]">
+          <span
+            className="mt-3 text-[12px] tracking-wide text-[color:var(--color-ink-faint)]"
+            aria-hidden="true"
+          >
             {task ? (
               <span className="block max-w-[210px] truncate">{task}</span>
             ) : isRunning ? (
@@ -471,6 +502,7 @@ export function Timer({ timer, settings, task, onTaskChange, strictLocked = fals
                 strokeWidth="1.8"
                 strokeLinecap="round"
                 strokeLinejoin="round"
+                aria-hidden="true"
               >
                 <circle cx="12" cy="12" r="4" />
                 <path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" />
@@ -532,7 +564,7 @@ export function Timer({ timer, settings, task, onTaskChange, strictLocked = fals
 
       {/* cycle sequence + caption */}
       <div className="flex flex-col items-center gap-2.5">
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1" aria-hidden="true">
           {cycle.map((step, i) => {
             const isDone = i < currentStepIdx
             const isCurrent = i === currentStepIdx

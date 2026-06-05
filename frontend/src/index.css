@@ -1,6 +1,13 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 @import 'tailwindcss';
 
+/* The palette is light-only, yet many components carry `dark:` colour variants
+   (e.g. lighter rose/amber text) that Tailwind would activate from the OS
+   `prefers-color-scheme: dark`. On a permanently light background those lighter
+   colours fail WCAG contrast. Bind the dark variant to an explicit `.dark`
+   class (never set) so OS dark mode can't degrade contrast. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
@@ -16,7 +23,10 @@
   --color-ink: #1a1917;
   --color-ink-soft: #38352f;
   --color-ink-muted: #6b665d;
-  --color-ink-faint: #a39e95;
+  /* Darkened from #a39e95 so secondary/hint text clears WCAG AA 4.5:1 on the
+     light canvas and surfaces. */
+  --color-ink-faint: #74706a;
+  /* Decorative only (cycle dots, dividers) — not used for text. */
   --color-ink-fainter: #c4c0b6;
 
   /* single decisive accent */
@@ -27,6 +37,9 @@
 
   --color-success: #16a34a;
   --color-success-soft: #dcfce7;
+  /* Darker green for success *text* — #16a34a only reaches ~3:1 on the soft
+     green banner and on the canvas; this clears WCAG AA 4.5:1. */
+  --color-success-strong: #166534;
 }
 
 html,
@@ -78,4 +91,46 @@ input[type='number'] {
   background: var(--color-ink-faint);
   background-clip: padding-box;
   border: 2px solid transparent;
+}
+
+/* Visible keyboard focus for every interactive element (WCAG 2.4.7 / 2.4.11).
+   Components may add their own richer focus-visible ring; this is the baseline
+   so nothing is ever focused without an indicator. Mouse clicks (which match
+   :focus but not :focus-visible) stay clean. */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* Skip-to-content link: off-screen until focused, then pinned top-left. */
+.skip-link {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 100;
+  transform: translateY(-150%);
+  transition: transform 0.15s ease;
+  background: var(--color-ink);
+  color: #fff;
+  padding: 0.625rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+/* Respect users who ask for less motion (WCAG 2.3.3): drop the ping pulses,
+   spin-ups, and long transitions to near-instant. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

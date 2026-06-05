@@ -46,6 +46,15 @@ export function AppPicker({ alreadyBlocked, onCancel, onConfirm }: AppPickerProp
   const [manualEntry, setManualEntry] = useState('')
   const [runningOnly, setRunningOnly] = useState(false)
 
+  // Close on Escape (WCAG 2.1.2 — no keyboard trap; standard dialog dismissal).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCancel()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onCancel])
+
   useEffect(() => {
     let cancelled = false
     const run = async () => {
@@ -129,10 +138,11 @@ export function AppPicker({ alreadyBlocked, onCancel, onConfirm }: AppPickerProp
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
+        aria-labelledby="app-picker-title"
       >
         <header className="flex items-center justify-between border-b border-[color:var(--color-line)] px-5 py-4">
           <div>
-            <h3 className="text-[16px] font-semibold tracking-tight text-[color:var(--color-ink)]">
+            <h3 id="app-picker-title" className="text-[16px] font-semibold tracking-tight text-[color:var(--color-ink)]">
               Pick apps to block
             </h3>
             <p className="mt-0.5 text-[12.5px] text-[color:var(--color-ink-muted)]">
@@ -154,7 +164,7 @@ export function AppPicker({ alreadyBlocked, onCancel, onConfirm }: AppPickerProp
         <div className="space-y-2.5 border-b border-[color:var(--color-line)] px-5 py-3">
           <div className="relative">
             <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--color-ink-faint)]">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true">
                 <circle cx="11" cy="11" r="7" />
                 <path d="M21 21l-4.3-4.3" />
               </svg>
@@ -164,6 +174,7 @@ export function AppPicker({ alreadyBlocked, onCancel, onConfirm }: AppPickerProp
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Filter apps…"
+              aria-label="Filter apps"
               className="w-full rounded-lg border border-[color:var(--color-line)] bg-[color:var(--color-surface)] py-2 pl-9 pr-3 text-[13px] text-[color:var(--color-ink)] placeholder:text-[color:var(--color-ink-faint)] focus:border-[color:var(--color-accent)]/60 focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/15"
               autoFocus
             />

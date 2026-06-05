@@ -164,6 +164,8 @@ export function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 autoComplete="email"
+                aria-invalid={error ? true : undefined}
+                aria-describedby={error ? 'login-error' : undefined}
                 className="rounded-md border border-[color:var(--color-line)] bg-[color:var(--color-canvas)] px-3 py-2 text-[14px] text-[color:var(--color-ink)] outline-none focus:border-[color:var(--color-accent)]"
               />
             </label>
@@ -171,7 +173,7 @@ export function LoginPage() {
               <span className="text-[12px] font-medium text-[color:var(--color-ink-muted)]">
                 Password
                 {tab === 'signup' && (
-                  <span className="ml-1 text-[color:var(--color-ink-faint)]">
+                  <span id="password-hint" className="ml-1 text-[color:var(--color-ink-faint)]">
                     (min 8 characters)
                   </span>
                 )}
@@ -183,12 +185,19 @@ export function LoginPage() {
                 required
                 minLength={tab === 'signup' ? 8 : undefined}
                 autoComplete={tab === 'signin' ? 'current-password' : 'new-password'}
+                aria-invalid={error ? true : undefined}
+                aria-describedby={
+                  [error ? 'login-error' : null, tab === 'signup' ? 'password-hint' : null]
+                    .filter(Boolean)
+                    .join(' ') || undefined
+                }
                 className="rounded-md border border-[color:var(--color-line)] bg-[color:var(--color-canvas)] px-3 py-2 text-[14px] text-[color:var(--color-ink)] outline-none focus:border-[color:var(--color-accent)]"
               />
             </label>
 
             {error && (
               <p
+                id="login-error"
                 role="alert"
                 className="rounded-md border border-rose-500/30 bg-rose-500/5 px-3 py-2 text-[12.5px] text-rose-700 dark:text-rose-300"
               >

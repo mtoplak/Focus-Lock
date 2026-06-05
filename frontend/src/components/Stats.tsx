@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAgent } from '../hooks/useAgent'
 import {
   computeLongestStreak,
@@ -132,9 +132,14 @@ export function Stats({ history, blockCounts, urlBlockCounts, onResetStats }: St
             const isToday = isoDate(d.date) === today
             const hasData = d.minutes > 0
             const barHeight = hasData ? `${Math.max(heightPct, 6)}%` : '0%'
+            const dayName = DAY_LABELS[(d.date.getDay() + 6) % 7]
             return (
               <div key={i} className="group flex flex-1 flex-col items-center gap-2">
-                <div className="relative h-40 w-full">
+                <span className="sr-only">
+                  {dayName}: {d.minutes > 0 ? formatMinutes(d.minutes) : 'no focus time'},{' '}
+                  {d.sessions} {d.sessions === 1 ? 'session' : 'sessions'}
+                </span>
+                <div className="relative h-40 w-full" aria-hidden="true">
                   <span
                     className="pointer-events-none absolute inset-0 rounded-md bg-[color:var(--color-surface-2)]"
                     aria-hidden
@@ -157,13 +162,14 @@ export function Stats({ history, blockCounts, urlBlockCounts, onResetStats }: St
                   </div>
                 </div>
                 <span
+                  aria-hidden="true"
                   className={`text-[11px] tracking-wide transition ${
                     isToday
                       ? 'font-semibold text-[color:var(--color-ink)]'
                       : 'text-[color:var(--color-ink-faint)] group-hover:text-[color:var(--color-ink-muted)]'
                   }`}
                 >
-                  {DAY_LABELS[(d.date.getDay() + 6) % 7]}
+                  {dayName}
                 </span>
               </div>
             )
@@ -270,6 +276,18 @@ function ResetStatsDialog({
   onCancel: () => void
   onConfirm: () => void
 }) {
+  const cancelRef = useRef<HTMLButtonElement>(null)
+
+  // Move focus into the dialog on open and let Escape dismiss it.
+  useEffect(() => {
+    cancelRef.current?.focus()
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCancel()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onCancel])
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
@@ -300,6 +318,7 @@ function ResetStatsDialog({
         </p>
         <div className="mt-6 flex justify-end gap-2">
           <button
+            ref={cancelRef}
             type="button"
             onClick={onCancel}
             className="rounded-md border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-4 py-2 text-[13px] font-medium text-[color:var(--color-ink-muted)] transition hover:text-[color:var(--color-ink)]"

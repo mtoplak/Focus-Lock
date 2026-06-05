@@ -103,13 +103,14 @@ export function BlockList({ items, onChange, mode, isRunning, strictLocked = fal
 
       {/* status banner */}
       <div
+        role="status"
         className={`mb-3 flex items-center gap-3 rounded-lg border px-4 py-3 text-[13px] ${
           blockingNow
-            ? 'border-[color:var(--color-success)]/25 bg-[color:var(--color-success-soft)] text-[color:var(--color-success)]'
+            ? 'border-[color:var(--color-success)]/25 bg-[color:var(--color-success-soft)] text-[color:var(--color-success-strong)]'
             : 'border-[color:var(--color-line)] bg-[color:var(--color-surface)] text-[color:var(--color-ink-muted)]'
         }`}
       >
-        <span className="relative flex h-2 w-2">
+        <span className="relative flex h-2 w-2" aria-hidden="true">
           {blockingNow && (
             <span className="absolute inset-0 animate-ping rounded-full bg-[color:var(--color-success)] opacity-60" />
           )}
@@ -138,8 +139,8 @@ export function BlockList({ items, onChange, mode, isRunning, strictLocked = fal
 
       {/* URL blocking status: only show when relevant */}
       {urlNeedsAdmin && (
-        <div className="mb-3 flex items-start gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-[12.5px] text-amber-700 dark:text-amber-300">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 shrink-0">
+        <div role="alert" className="mb-3 flex items-start gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-[12.5px] text-amber-700 dark:text-amber-300">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 shrink-0" aria-hidden="true">
             <path d="M12 9v4M12 17h.01M10.3 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
           </svg>
           <div className="flex-1">
@@ -155,8 +156,8 @@ export function BlockList({ items, onChange, mode, isRunning, strictLocked = fal
       )}
 
       {urlBlockingError && (
-        <div className="mb-3 flex items-start gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-[12.5px] text-amber-700 dark:text-amber-300">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 shrink-0">
+        <div role="alert" className="mb-3 flex items-start gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-[12.5px] text-amber-700 dark:text-amber-300">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 shrink-0" aria-hidden="true">
             <path d="M12 9v4M12 17h.01M10.3 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
           </svg>
           <div className="flex-1">
@@ -169,6 +170,7 @@ export function BlockList({ items, onChange, mode, isRunning, strictLocked = fal
       {/* agent status */}
       {activeApps > 0 && (
         <div
+          role="status"
           className={`mb-6 flex items-center gap-2.5 rounded-lg border px-4 py-2.5 text-[12.5px] ${
             agent.status === 'connected'
               ? 'border-sky-500/25 bg-sky-500/5 text-sky-700 dark:text-sky-300'
@@ -178,6 +180,7 @@ export function BlockList({ items, onChange, mode, isRunning, strictLocked = fal
           }`}
         >
           <span
+            aria-hidden="true"
             className={`h-1.5 w-1.5 rounded-full ${
               agent.status === 'connected'
                 ? 'bg-sky-500'
@@ -202,12 +205,17 @@ export function BlockList({ items, onChange, mode, isRunning, strictLocked = fal
         className="mb-5 flex gap-2 disabled:opacity-50"
         title={strictLocked ? 'Locked by strict mode' : undefined}
       >
-        <div className="flex gap-0.5 rounded-lg border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-0.5">
+        <div
+          role="group"
+          aria-label="Type of distraction to add"
+          className="flex gap-0.5 rounded-lg border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-0.5"
+        >
           {(['url', 'app'] as BlockKind[]).map((k) => (
             <button
               key={k}
               type="button"
               onClick={() => setDraftKind(k)}
+              aria-pressed={draftKind === k}
               className={`rounded-md px-3 py-2 text-[12.5px] font-medium transition disabled:cursor-not-allowed ${
                 draftKind === k
                   ? 'bg-[color:var(--color-ink)] text-white'
@@ -223,7 +231,7 @@ export function BlockList({ items, onChange, mode, isRunning, strictLocked = fal
           <>
             <div className="relative flex-1">
               <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[color:var(--color-ink-faint)]">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true">
                   <circle cx="11" cy="11" r="7" />
                   <path d="M21 21l-4.3-4.3" />
                 </svg>
@@ -234,6 +242,7 @@ export function BlockList({ items, onChange, mode, isRunning, strictLocked = fal
                 onChange={(e) => setDraft(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && add()}
                 placeholder={KIND_PLACEHOLDER[draftKind]}
+                aria-label="Site to block"
                 className="w-full rounded-lg border border-[color:var(--color-line)] bg-[color:var(--color-surface)] py-2.5 pl-10 pr-3 font-mono text-[13.5px] text-[color:var(--color-ink)] placeholder:font-sans placeholder:text-[color:var(--color-ink-faint)] focus:border-[color:var(--color-accent)]/60 focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/15 disabled:cursor-not-allowed"
               />
             </div>
@@ -287,6 +296,7 @@ export function BlockList({ items, onChange, mode, isRunning, strictLocked = fal
               type="button"
               role="switch"
               aria-checked={item.enabled}
+              aria-label={`Block ${item.label}`}
               onClick={() => toggle(item.id)}
               disabled={strictLocked}
               title={strictLocked ? 'Locked by strict mode' : undefined}

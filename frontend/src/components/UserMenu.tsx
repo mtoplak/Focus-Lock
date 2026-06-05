@@ -28,8 +28,16 @@ export function UserMenu() {
       }
     }
 
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') setOpen(false)
+    }
+
     document.addEventListener('mousedown', onPointerDown)
-    return () => document.removeEventListener('mousedown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
   }, [open])
 
   if (!user) return null
@@ -73,6 +81,7 @@ export function UserMenu() {
           fill="none"
           stroke="currentColor"
           strokeWidth="2"
+          aria-hidden="true"
           className={`hidden text-[color:var(--color-ink-faint)] sm:block ${open ? 'rotate-180' : ''}`}
         >
           <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />

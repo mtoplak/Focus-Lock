@@ -17,7 +17,7 @@ export function AmbientPlayer({ ambient }: AmbientPlayerProps) {
       <div className="mb-2 flex items-center justify-between px-1 text-[10.5px] font-medium uppercase tracking-wider text-[color:var(--color-ink-faint)]">
         <span>Ambient</span>
         {fileError && (
-          <span className="text-amber-600 dark:text-amber-400" title="Audio file not found">
+          <span role="status" className="text-amber-600 dark:text-amber-400" title="Audio file not found">
             file missing
           </span>
         )}
@@ -32,12 +32,12 @@ export function AmbientPlayer({ ambient }: AmbientPlayerProps) {
           className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[color:var(--color-ink)] text-white transition hover:bg-[color:var(--color-ink-soft)] active:scale-95 disabled:cursor-not-allowed disabled:opacity-30"
         >
           {state.playing ? (
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <rect x="6" y="5" width="4" height="14" rx="1" />
               <rect x="14" y="5" width="4" height="14" rx="1" />
             </svg>
           ) : (
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <path d="M7 5l12 7-12 7V5z" />
             </svg>
           )}
@@ -47,10 +47,13 @@ export function AmbientPlayer({ ambient }: AmbientPlayerProps) {
           <button
             type="button"
             onClick={() => setPickerOpen((v) => !v)}
+            aria-haspopup="listbox"
+            aria-expanded={pickerOpen}
+            aria-label={`Ambient track: ${currentTrack.label}. Change track`}
             className="flex w-full items-center justify-between gap-1 rounded-md px-2 py-1 text-left text-[12px] font-medium text-[color:var(--color-ink)] transition hover:bg-[color:var(--color-surface-2)]"
           >
             <span className="truncate">{currentTrack.label}</span>
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M6 9l6 6 6-6" />
             </svg>
           </button>
@@ -71,6 +74,7 @@ export function AmbientPlayer({ ambient }: AmbientPlayerProps) {
                         setTrack(t.id)
                         setPickerOpen(false)
                       }}
+                      aria-current={t.id === state.track ? 'true' : undefined}
                       className={`flex w-full items-center justify-between px-3 py-1.5 text-left text-[12.5px] transition ${
                         t.id === state.track
                           ? 'bg-[color:var(--color-surface-2)] text-[color:var(--color-ink)]'
