@@ -26,6 +26,14 @@ export default function App() {
         }
       />
       <Route
+        path="/schedule"
+        element={
+          <ProtectedRoute>
+            <HomePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/stats"
         element={
           <ProtectedRoute>

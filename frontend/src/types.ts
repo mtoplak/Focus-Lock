@@ -22,6 +22,22 @@ export interface BlockedItem {
   enabled: boolean
 }
 
+/**
+ * A recurring time window during which the enabled block list is enforced
+ * automatically — independent of the focus timer.
+ */
+export interface ScheduleBlock {
+  id: string
+  label: string
+  /** Days the window repeats on. 0 = Sunday … 6 = Saturday. */
+  days: number[]
+  /** Local start time, "HH:MM" (24h). */
+  start: string
+  /** Local end time, "HH:MM" (24h). End <= start means the window spans midnight. */
+  end: string
+  enabled: boolean
+}
+
 export interface SessionRecord {
   date: string
   focusMinutes: number
@@ -56,6 +72,8 @@ export const DEFAULT_SETTINGS: Settings = {
   voiceControlEnabled: false,
   strictMode: false,
 }
+
+export const DEFAULT_SCHEDULES: ScheduleBlock[] = []
 
 export const DEFAULT_BLOCKED: BlockedItem[] = [
   { id: '1', label: 'youtube.com', kind: 'url', enabled: true },

@@ -10,20 +10,30 @@ import { VoiceControl } from '../components/VoiceControl'
 import { AmbientPlayer } from '../components/AmbientPlayer'
 import { Timer } from '../components/Timer'
 import { BlockList } from '../components/BlockList'
+import { Schedule } from '../components/Schedule'
 import { Stats } from '../components/Stats'
 import { SettingsView } from '../components/SettingsView'
 import { UserMenu } from '../components/UserMenu'
-import type { AppBlockCount, BlockedItem, SessionRecord, Settings, UrlBlockCount } from '../types'
+import type {
+  AppBlockCount,
+  BlockedItem,
+  ScheduleBlock,
+  SessionRecord,
+  Settings,
+  UrlBlockCount,
+} from '../types'
 import { useAgentBlockStatsSync } from '../hooks/useBlockKillSync'
+import { useScheduleActive } from '../hooks/useSchedule'
 import { resetDisplayedStatsWithBaseline } from '../lib/statsStorage'
 import { fetchAgentBlockBaseline, getCachedAgentState } from '../hooks/useAgent'
-import { DEFAULT_BLOCKED, DEFAULT_SETTINGS } from '../types'
+import { DEFAULT_BLOCKED, DEFAULT_SCHEDULES, DEFAULT_SETTINGS } from '../types'
 
-type View = 'timer' | 'block' | 'stats' | 'settings'
+type View = 'timer' | 'block' | 'schedule' | 'stats' | 'settings'
 
 const VIEW_TO_PATH: Record<View, string> = {
   timer: '/',
   block: '/blocks',
+  schedule: '/schedule',
   stats: '/stats',
   settings: '/settings',
 }
@@ -31,6 +41,7 @@ const VIEW_TO_PATH: Record<View, string> = {
 const PATH_TO_VIEW: Record<string, View> = {
   '/': 'timer',
   '/blocks': 'block',
+  '/schedule': 'schedule',
   '/stats': 'stats',
   '/settings': 'settings',
 }
@@ -53,6 +64,16 @@ const NAV: { id: View; label: string; icon: ReactNode }[] = [
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="9" />
         <path d="M5 5l14 14" />
+      </svg>
+    ),
+  },
+  {
+    id: 'schedule',
+    label: 'Schedule',
+    icon: (
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="4" width="18" height="17" rx="2" />
+        <path d="M3 9h18M8 2v4M16 2v4M12 13v3l2 1" />
       </svg>
     ),
   },
@@ -87,6 +108,10 @@ export function HomePage() {
   const [task, setTask] = useState('')
   const [settings, setSettings] = useLocalStorage<Settings>('fl.settings', DEFAULT_SETTINGS)
   const [blocked, setBlocked] = useLocalStorage<BlockedItem[]>('fl.blocked', DEFAULT_BLOCKED)
+  const [schedules, setSchedules] = useLocalStorage<ScheduleBlock[]>(
+    'fl.schedules',
+    DEFAULT_SCHEDULES,
+  )
   const [history, setHistory] = useLocalStorage<SessionRecord[]>('fl.history', [])
   const [blockCounts, setBlockCounts] = useLocalStorage<AppBlockCount[]>('fl.blockCounts', [])
   const [urlBlockCounts, setUrlBlockCounts] = useLocalStorage<UrlBlockCount[]>(
@@ -180,7 +205,11 @@ export function HomePage() {
     }
   }, [blocked, setBlocked])
 
-  useAgentSync(blocked, timer.mode === 'focus' && timer.isRunning)
+  // Blocking is enforced either by a running focus session or by an active
+  // schedule window — whichever is on.
+  const scheduleActive = useScheduleActive(schedules)
+  const timerBlocking = timer.mode === 'focus' && timer.isRunning
+  useAgentSync(blocked, timerBlocking || scheduleActive)
 
   // Keep the screen awake during a running focus session.
   const screenAwake = useWakeLock(timer.mode === 'focus' && timer.isRunning)
@@ -318,6 +347,15 @@ export function HomePage() {
             onChange={setBlocked}
             mode={timer.mode}
             isRunning={timer.isRunning}
+            scheduleActive={scheduleActive}
+            strictLocked={isStrictLocked}
+          />
+        )}
+        {view === 'schedule' && (
+          <Schedule
+            schedules={schedules}
+            onChange={setSchedules}
+            blocked={blocked}
             strictLocked={isStrictLocked}
           />
         )}
