@@ -11,7 +11,8 @@ import {
   timerNotificationOptions,
   timerNotificationTitle,
 } from './lib/timerNotificationContent'
-import type { TimerEndSchedule, TimerSwOutboundMessage } from './lib/timerSwSync'
+import { createTimerEndAlarmScheduler } from './lib/timerSwAlarm'
+import type { TimerSwOutboundMessage } from './lib/timerSwSync'
 
 declare const self: ServiceWorkerGlobalScope & {
   __WB_MANIFEST: Array<{ url: string; revision: string | null }>
@@ -45,33 +46,15 @@ registerRoute(
 self.skipWaiting()
 clientsClaim()
 
-let endAlarmId: ReturnType<typeof setTimeout> | null = null
-
-function clearEndAlarm(): void {
-  if (endAlarmId !== null) {
-    clearTimeout(endAlarmId)
-    endAlarmId = null
-  }
-}
-
 async function showTimerEndNotification(mode: TimerMode): Promise<void> {
   const title = timerNotificationTitle('end', mode)
   const options = timerNotificationOptions('end', mode)
   await self.registration.showNotification(title, options)
 }
 
-function scheduleEndAlarm(schedule: TimerEndSchedule): void {
-  clearEndAlarm()
-  if (!schedule.notificationsEnabled) return
-
-  const delay = schedule.endsAt - Date.now()
-  if (delay <= 0) return
-
-  endAlarmId = setTimeout(() => {
-    endAlarmId = null
-    void showTimerEndNotification(schedule.mode)
-  }, delay)
-}
+const endAlarm = createTimerEndAlarmScheduler((mode) => {
+  void showTimerEndNotification(mode)
+})
 
 function requestClientResync(): void {
   void self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
@@ -86,12 +69,12 @@ self.addEventListener('message', (event: ExtendableMessageEvent) => {
   if (!data || typeof data.type !== 'string') return
 
   if (data.type === 'TIMER_SCHEDULE_END') {
-    scheduleEndAlarm(data.schedule)
+    endAlarm.schedule(data.schedule)
     return
   }
 
   if (data.type === 'TIMER_CLEAR_END') {
-    clearEndAlarm()
+    endAlarm.clear()
   }
 })
 
