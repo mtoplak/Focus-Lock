@@ -3,13 +3,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useTimer } from './useTimer'
 import { DEFAULT_SETTINGS, type Settings } from '../types'
 
-vi.mock('../lib/notify', () => ({
+const { notifyTimer, scheduleTimerEndInSw, clearTimerEndInSw } = vi.hoisted(() => ({
   notifyTimer: vi.fn(),
-}))
-
-const { scheduleTimerEndInSw, clearTimerEndInSw } = vi.hoisted(() => ({
   scheduleTimerEndInSw: vi.fn(),
   clearTimerEndInSw: vi.fn(),
+}))
+
+vi.mock('../lib/notify', () => ({
+  notifyTimer,
 }))
 
 vi.mock('../lib/timerSwSync', () => ({
@@ -34,6 +35,7 @@ describe('useTimer', () => {
   beforeEach(() => {
     localStorage.clear()
     vi.useRealTimers()
+    notifyTimer.mockClear()
     scheduleTimerEndInSw.mockClear()
     clearTimerEndInSw.mockClear()
   })
@@ -87,6 +89,7 @@ describe('useTimer', () => {
       result.current.resetCycle()
     })
 
+    expect(clearTimerEndInSw).toHaveBeenCalled()
     expect(result.current.mode).toBe('focus')
     expect(result.current.completedInCycle).toBe(0)
     expect(result.current.completedFocusSessions).toBe(2)
@@ -124,5 +127,141 @@ describe('useTimer', () => {
     expect(result.current.mode).toBe('focus')
     expect(result.current.completedInCycle).toBe(0)
     expect(result.current.canResetCycle).toBe(false)
+  })
+
+  it('completes a focus interval and moves to short break', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-06-04T10:00:00Z'))
+    const onFocusComplete = vi.fn()
+
+    const { result } = renderHook(() => useTimer(shortSettings, onFocusComplete))
+
+    act(() => {
+      result.current.start()
+    })
+
+    act(() => {
+      vi.advanceTimersByTime(60_000)
+    })
+
+    expect(result.current.mode).toBe('short-break')
+    expect(result.current.completedFocusSessions).toBe(1)
+    expect(result.current.completedInCycle).toBe(1)
+    expect(result.current.secondsLeft).toBe(60)
+    expect(result.current.isRunning).toBe(false)
+    expect(onFocusComplete).toHaveBeenCalledWith(1)
+  })
+
+  it('notifies when a focus interval ends in the foreground', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-06-04T10:00:00Z'))
+
+    const settings = { ...shortSettings, notificationsEnabled: true }
+    const { result } = renderHook(() => useTimer(settings, vi.fn()))
+
+    act(() => {
+      result.current.start()
+    })
+    act(() => {
+      vi.advanceTimersByTime(60_000)
+    })
+
+    expect(notifyTimer).toHaveBeenCalledWith('end', 'focus')
+  })
+
+  it('auto-starts the next break when a focus interval ends', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-06-04T10:00:00Z'))
+
+    const settings = {
+      ...shortSettings,
+      autoStartBreaks: true,
+      notificationsEnabled: true,
+    }
+    const { result } = renderHook(() => useTimer(settings, vi.fn()))
+
+    act(() => {
+      result.current.start()
+    })
+    act(() => {
+      vi.advanceTimersByTime(60_000)
+    })
+
+    expect(result.current.mode).toBe('short-break')
+    expect(result.current.isRunning).toBe(true)
+    expect(notifyTimer).toHaveBeenCalledWith('end', 'focus')
+    expect(notifyTimer).toHaveBeenCalledWith('start', 'short-break')
+  })
+
+  it('skips from focus to break and records a completed session', () => {
+    const onFocusComplete = vi.fn()
+    const { result } = renderHook(() => useTimer(shortSettings, onFocusComplete))
+
+    act(() => {
+      result.current.skip()
+    })
+
+    expect(result.current.mode).toBe('short-break')
+    expect(result.current.completedFocusSessions).toBe(1)
+    expect(result.current.isRunning).toBe(false)
+    expect(onFocusComplete).toHaveBeenCalledWith(1)
+  })
+
+  it('silent catch-up after a long absence skips notifications and auto-start', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-06-04T10:00:00Z'))
+
+    const settings = {
+      ...shortSettings,
+      autoStartBreaks: true,
+      notificationsEnabled: true,
+    }
+    const endsAt = Date.now() - 5_000
+
+    localStorage.setItem(
+      'fl.timer.v1',
+      JSON.stringify({
+        mode: 'focus',
+        completedFocusSessions: 0,
+        cycleOffset: 0,
+        totalSeconds: 60,
+        secondsLeft: 0,
+        endsAt,
+      }),
+    )
+
+    const { result } = renderHook(() => useTimer(settings, vi.fn()))
+
+    expect(result.current.mode).toBe('short-break')
+    expect(result.current.completedFocusSessions).toBe(1)
+    expect(result.current.isRunning).toBe(false)
+    expect(notifyTimer).not.toHaveBeenCalled()
+  })
+
+  it('moves to long break after the last focus in a cycle', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-06-04T10:00:00Z'))
+
+    localStorage.setItem(
+      'fl.timer.v1',
+      JSON.stringify({
+        mode: 'focus',
+        completedFocusSessions: 3,
+        cycleOffset: 0,
+        totalSeconds: 60,
+        secondsLeft: 60,
+        endsAt: null,
+      }),
+    )
+
+    const { result } = renderHook(() => useTimer(shortSettings, vi.fn()))
+
+    act(() => {
+      result.current.skip()
+    })
+
+    expect(result.current.mode).toBe('long-break')
+    expect(result.current.completedFocusSessions).toBe(4)
+    expect(result.current.completedInCycle).toBe(0)
   })
 })
