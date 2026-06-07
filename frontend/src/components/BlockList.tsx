@@ -8,6 +8,8 @@ interface BlockListProps {
   onChange: (items: BlockedItem[]) => void
   mode: TimerMode
   isRunning: boolean
+  /** Whether a scheduled blocking window is currently active. */
+  scheduleActive?: boolean
   strictLocked?: boolean
 }
 
@@ -21,7 +23,14 @@ const KIND_PLACEHOLDER: Record<BlockKind, string> = {
   app: 'e.g. Spotify.exe',
 }
 
-export function BlockList({ items, onChange, mode, isRunning, strictLocked = false }: BlockListProps) {
+export function BlockList({
+  items,
+  onChange,
+  mode,
+  isRunning,
+  scheduleActive = false,
+  strictLocked = false,
+}: BlockListProps) {
   const [draft, setDraft] = useState('')
   const [draftKind, setDraftKind] = useState<BlockKind>('url')
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -55,7 +64,8 @@ export function BlockList({ items, onChange, mode, isRunning, strictLocked = fal
   const activeCount = items.filter((i) => i.enabled).length
   const activeApps = items.filter((i) => i.enabled && i.kind === 'app').length
   const activeUrls = items.filter((i) => i.enabled && i.kind === 'url').length
-  const blockingNow = mode === 'focus' && isRunning && activeCount > 0
+  const enforcing = (mode === 'focus' && isRunning) || scheduleActive
+  const blockingNow = enforcing && activeCount > 0
   const urlNeedsAdmin = agent.urlBlocking?.kind === 'needs-admin' && activeUrls > 0
   const urlBlockingError =
     agent.urlBlocking?.kind === 'error' && activeUrls > 0 ? agent.urlBlocking.message : undefined
@@ -129,7 +139,7 @@ export function BlockList({ items, onChange, mode, isRunning, strictLocked = fal
               {activeApps === 1 ? 'app' : 'apps'}
             </>
           ) : (
-            'Blocking activates during focus sessions'
+            'Blocking activates during focus sessions and scheduled windows'
           )}
         </span>
         <span className="font-mono text-[11px] text-[color:var(--color-ink-faint)]">
