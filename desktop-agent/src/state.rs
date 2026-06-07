@@ -114,3 +114,83 @@ pub struct Snapshot {
 pub fn normalize_name(s: String) -> String {
     s.trim().to_ascii_lowercase()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn normalize_name_trims_and_lowercases() {
+        assert_eq!(normalize_name("  Discord.EXE  ".into()), "discord.exe");
+    }
+
+    #[test]
+    fn update_sync_stores_normalized_block_lists_and_focus_flag() {
+        let state = AppState::new();
+        state.update_sync(
+            vec![" Discord.EXE ".into(), "Spotify.exe".into()],
+            vec![" YouTube.COM ".into(), "reddit.com".into()],
+            true,
+        );
+
+        let snap = state.snapshot();
+        assert!(snap.focus_active);
+        assert_eq!(
+            snap.blocked_apps,
+            ["discord.exe".into(), "spotify.exe".into()]
+                .into_iter()
+                .collect::<HashSet<_>>()
+        );
+        assert_eq!(
+            snap.blocked_urls,
+            ["youtube.com".into(), "reddit.com".into()]
+                .into_iter()
+                .collect::<HashSet<_>>()
+        );
+    }
+
+    #[test]
+    fn record_kill_increments_per_process_totals() {
+        let state = AppState::new();
+        state.record_kill("Discord.exe");
+        state.record_kill("DISCORD.EXE");
+        state.record_kill("Spotify.exe");
+
+        let snap = state.snapshot();
+        assert_eq!(snap.last_kill.as_deref(), Some("Spotify.exe"));
+        assert_eq!(snap.kill_counts.get("discord.exe"), Some(&2));
+        assert_eq!(snap.kill_counts.get("spotify.exe"), Some(&1));
+    }
+
+    #[test]
+    fn record_url_query_increments_per_domain_totals() {
+        let state = AppState::new();
+        state.record_url_query("YouTube.com");
+        state.record_url_query("youtube.com");
+        state.record_url_query("reddit.com");
+
+        let snap = state.snapshot();
+        assert_eq!(snap.url_block_counts.get("youtube.com"), Some(&2));
+        assert_eq!(snap.url_block_counts.get("reddit.com"), Some(&1));
+    }
+
+    #[test]
+    fn set_url_status_updates_snapshot() {
+        let state = AppState::new();
+        state.set_url_status(UrlBlockStatus::Active);
+        assert_eq!(state.snapshot().url_status, UrlBlockStatus::Active);
+
+        state.set_url_status(UrlBlockStatus::NeedsAdmin);
+        assert_eq!(state.snapshot().url_status, UrlBlockStatus::NeedsAdmin);
+
+        state.set_url_status(UrlBlockStatus::Error {
+            message: "dns bind failed".into(),
+        });
+        assert_eq!(
+            state.snapshot().url_status,
+            UrlBlockStatus::Error {
+                message: "dns bind failed".into()
+            }
+        );
+    }
+}

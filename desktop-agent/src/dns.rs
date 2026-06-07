@@ -289,15 +289,63 @@ impl Default for DnsController {
 mod tests {
     use super::*;
 
+    fn sample_query(qtype: u16) -> Vec<u8> {
+        vec![
+            0xAB, 0xCD, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 3, b'w',
+            b'w', b'w', 7, b'e', b'x', b'a', b'm', b'p', b'l', b'e', 3, b'c', b'o', b'm', 0,
+            (qtype >> 8) as u8, (qtype & 0xFF) as u8, 0, 1,
+        ]
+    }
+
     #[test]
     fn parses_simple_qname() {
-        // ID=0, flags=0, qd=1, header + "www.example.com\0" + type A + class IN
-        let mut msg = vec![
-            0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 3, b'w', b'w', b'w', 7, b'e', b'x', b'a', b'm',
-            b'p', b'l', b'e', 3, b'c', b'o', b'm', 0, 0, 1, 0, 1,
-        ];
+        let msg = sample_query(1);
         let (name, qtype) = parse_first_question(&msg).unwrap();
         assert_eq!(name, "www.example.com");
         assert_eq!(qtype, 1);
+    }
+
+    #[test]
+    fn parse_first_question_rejects_empty_or_truncated_packets() {
+        assert!(parse_first_question(&[]).is_none());
+        assert!(parse_first_question(&[0; 11]).is_none());
+
+        let mut no_questions = sample_query(1);
+        no_questions[5] = 0;
+        assert!(parse_first_question(&no_questions).is_none());
+
+        let truncated = sample_query(1);
+        assert!(parse_first_question(&truncated[..20]).is_none());
+    }
+
+    #[test]
+    fn build_blocked_response_returns_ipv4_sinkhole() {
+        let query = sample_query(1);
+        let response = build_blocked_response(&query, 1).expect("blocked A response");
+
+        assert_eq!(&response[0..2], &[0xAB, 0xCD]); // preserve query ID
+        assert_eq!(response[2], 0x81); // response QR bit set
+        assert_eq!(&response[6..8], &[0, 1]); // one answer
+        assert!(response.ends_with(&[0, 0, 0, 0])); // A → 0.0.0.0
+    }
+
+    #[test]
+    fn build_blocked_response_returns_ipv6_sinkhole() {
+        let query = sample_query(28);
+        let response = build_blocked_response(&query, 28).expect("blocked AAAA response");
+        assert!(response.ends_with(&[0u8; 16])); // AAAA → ::
+    }
+
+    #[test]
+    fn build_blocked_response_returns_none_for_unsupported_types() {
+        let query = sample_query(15); // MX
+        assert!(build_blocked_response(&query, 15).is_none());
+    }
+
+    #[test]
+    fn dns_error_identifies_permission_denied() {
+        let err = DnsError::PermissionDenied;
+        assert!(err.is_permission_denied());
+        assert!(err.to_string().contains("permission denied"));
     }
 }

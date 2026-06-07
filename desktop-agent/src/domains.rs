@@ -52,6 +52,17 @@ mod tests {
     use super::*;
 
     #[test]
+    fn normalize_host_strips_url_parts_and_www() {
+        assert_eq!(
+            normalize_host("https://www.YouTube.com/watch?v=1"),
+            Some("youtube.com".into())
+        );
+        assert_eq!(normalize_host("http://reddit.com:443/path"), Some("reddit.com".into()));
+        assert_eq!(normalize_host("  "), None);
+        assert_eq!(normalize_host("example.com."), Some("example.com".into()));
+    }
+
+    #[test]
     fn matches_subdomains() {
         let blocked: HashSet<String> = ["youtube.com".into()].into_iter().collect();
         assert_eq!(
@@ -63,5 +74,28 @@ mod tests {
             Some("youtube.com".into())
         );
         assert_eq!(match_blocked_domain("google.com", &blocked), None);
+    }
+
+    #[test]
+    fn does_not_match_bare_domain_as_subdomain_of_longer_block() {
+        let blocked: HashSet<String> = ["notyoutube.com".into()].into_iter().collect();
+        assert_eq!(match_blocked_domain("youtube.com", &blocked), None);
+        assert_eq!(
+            match_blocked_domain("foo.notyoutube.com", &blocked),
+            Some("notyoutube.com".into())
+        );
+    }
+
+    #[test]
+    fn canonical_key_sorts_and_deduplicates() {
+        let blocked: HashSet<String> = [
+            "youtube.com".into(),
+            "reddit.com".into(),
+            "youtube.com".into(),
+            "WWW.reddit.com".into(),
+        ]
+        .into_iter()
+        .collect();
+        assert_eq!(canonical_key(&blocked), "reddit.com,youtube.com");
     }
 }
