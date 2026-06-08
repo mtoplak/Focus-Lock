@@ -7,10 +7,17 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { clearTokens, hasStoredSession, saveTokens } from '../lib/authStorage'
+import {
+  clearTokens,
+  hasStoredSession,
+  loadCachedUserProfile,
+  saveCachedUserProfile,
+  saveTokens,
+} from '../lib/authStorage'
 import {
   fetchMe,
   getGoogleSignInUrl,
+  isNetworkError,
   loginWithPassword,
   logoutApi,
   registerWithPassword,
@@ -30,6 +37,8 @@ type AuthContextValue = {
   user: AuthUser | null
   /** True when the current session is a local-only guest (no backend account). */
   isGuest: boolean
+  /** Profile restored from cache because the API could not be reached. */
+  sessionOffline: boolean
   loading: boolean
   signInWithGoogle: () => void
   signInWithPassword: (input: { email: string; password: string }) => Promise<void>
@@ -62,25 +71,55 @@ function setGuestFlag(on: boolean): void {
   }
 }
 
+const OFFLINE_PLACEHOLDER: AuthUser = {
+  id: 'offline',
+  email: '',
+  name: 'Signed in (offline)',
+  avatar_url: null,
+}
+
+function restoreOfflineSession(): AuthUser {
+  return loadCachedUserProfile() ?? OFFLINE_PLACEHOLDER
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [isGuest, setIsGuest] = useState(false)
+  const [sessionOffline, setSessionOffline] = useState(false)
   const [loading, setLoading] = useState(true)
 
   const loadUser = useCallback(async () => {
     if (hasGuestFlag()) {
       setIsGuest(true)
+      setSessionOffline(false)
       setUser(GUEST_USER)
       return
     }
     if (!hasStoredSession()) {
       setIsGuest(false)
+      setSessionOffline(false)
       setUser(null)
       return
     }
-    const profile = await fetchMe()
-    setIsGuest(false)
-    setUser(profile)
+    try {
+      const profile = await fetchMe()
+      saveCachedUserProfile(profile)
+      setIsGuest(false)
+      setSessionOffline(false)
+      setUser(profile)
+    } catch (err) {
+      if (isNetworkError(err)) {
+        setIsGuest(false)
+        setSessionOffline(true)
+        setUser(restoreOfflineSession())
+        return
+      }
+      clearTokens()
+      setIsGuest(false)
+      setSessionOffline(false)
+      setUser(null)
+      throw err
+    }
   }, [])
 
   useEffect(() => {
@@ -107,14 +146,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const profile = await fetchMe()
         if (!cancelled) {
+          saveCachedUserProfile(profile)
           setIsGuest(false)
+          setSessionOffline(false)
           setUser(profile)
         }
-      } catch {
-        clearTokens()
+      } catch (err) {
         if (!cancelled) {
-          setIsGuest(false)
-          setUser(null)
+          if (isNetworkError(err)) {
+            setIsGuest(false)
+            setSessionOffline(true)
+            setUser(restoreOfflineSession())
+          } else {
+            clearTokens()
+            setIsGuest(false)
+            setSessionOffline(false)
+            setUser(null)
+          }
         }
       } finally {
         if (!cancelled) setLoading(false)
@@ -127,6 +175,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [loadUser])
 
+  useEffect(() => {
+    if (!sessionOffline) return
+    const retry = () => {
+      void loadUser().catch(() => {
+        // stay on cached session
+      })
+    }
+    window.addEventListener('online', retry)
+    return () => window.removeEventListener('online', retry)
+  }, [sessionOffline, loadUser])
+
   const signInWithGoogle = useCallback(() => {
     setGuestFlag(false)
     window.location.href = getGoogleSignInUrl()
@@ -137,7 +196,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await loginWithPassword(input)
       setGuestFlag(false)
       saveTokens(res)
+      saveCachedUserProfile(res.user)
       setIsGuest(false)
+      setSessionOffline(false)
       setUser(res.user)
     },
     [],
@@ -148,7 +209,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await registerWithPassword(input)
       setGuestFlag(false)
       saveTokens(res)
+      saveCachedUserProfile(res.user)
       setIsGuest(false)
+      setSessionOffline(false)
       setUser(res.user)
     },
     [],
@@ -158,6 +221,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearTokens()
     setGuestFlag(true)
     setIsGuest(true)
+    setSessionOffline(false)
     setUser(GUEST_USER)
   }, [])
 
@@ -174,6 +238,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (isGuest) {
       setGuestFlag(false)
       setIsGuest(false)
+      setSessionOffline(false)
       setUser(null)
       return
     }
@@ -181,6 +246,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await logoutApi()
     } finally {
       clearTokens()
+      setSessionOffline(false)
       setUser(null)
     }
   }, [isGuest])
@@ -189,6 +255,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       user,
       isGuest,
+      sessionOffline,
       loading,
       signInWithGoogle,
       signInWithPassword,
@@ -200,6 +267,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [
       user,
       isGuest,
+      sessionOffline,
       loading,
       signInWithGoogle,
       signInWithPassword,

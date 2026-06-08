@@ -1,8 +1,9 @@
-import type { AuthTokens } from '../types/auth'
+import type { AuthTokens, AuthUser } from '../types/auth'
 
 const ACCESS_KEY = 'fl.access_token'
 const REFRESH_KEY = 'fl.refresh_token'
 const EXPIRES_AT_KEY = 'fl.expires_at'
+const PROFILE_KEY = 'fl.user_profile'
 
 export function getStoredAccessToken(): string | null {
   return localStorage.getItem(ACCESS_KEY)
@@ -32,6 +33,27 @@ export function clearTokens(): void {
   localStorage.removeItem(ACCESS_KEY)
   localStorage.removeItem(REFRESH_KEY)
   localStorage.removeItem(EXPIRES_AT_KEY)
+  localStorage.removeItem(PROFILE_KEY)
+}
+
+export function saveCachedUserProfile(user: AuthUser): void {
+  try {
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(user))
+  } catch {
+    // ignore quota errors
+  }
+}
+
+export function loadCachedUserProfile(): AuthUser | null {
+  try {
+    const raw = localStorage.getItem(PROFILE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as AuthUser
+    if (parsed && typeof parsed.id === 'string') return parsed
+  } catch {
+    // ignore
+  }
+  return null
 }
 
 export function hasStoredSession(): boolean {

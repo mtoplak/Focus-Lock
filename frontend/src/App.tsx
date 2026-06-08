@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
+import { OfflineBanner, OfflineBannerSpacer } from './components/OfflineBanner'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { AuthCallbackPage } from './pages/AuthCallbackPage'
 import { HomePage } from './pages/HomePage'
@@ -6,7 +7,10 @@ import { LoginPage } from './pages/LoginPage'
 
 export default function App() {
   return (
-    <Routes>
+    <>
+      <OfflineBanner />
+      <OfflineBannerSpacer />
+      <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/auth/callback" element={<AuthCallbackPage />} />
       <Route
@@ -50,6 +54,7 @@ export default function App() {
         }
       />
       <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      </Routes>
+    </>
   )
 }

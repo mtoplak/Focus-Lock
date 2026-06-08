@@ -23,6 +23,7 @@ import type {
   UrlBlockCount,
 } from '../types'
 import { useAgentBlockStatsSync } from '../hooks/useBlockKillSync'
+import { useConnectivity } from '../hooks/useConnectivity'
 import { useScheduleActive } from '../hooks/useSchedule'
 import { resetDisplayedStatsWithBaseline } from '../lib/statsStorage'
 import { fetchAgentBlockBaseline, getCachedAgentState } from '../hooks/useAgent'
@@ -213,6 +214,7 @@ export function HomePage() {
 
   // Keep the screen awake during a running focus session.
   const screenAwake = useWakeLock(timer.mode === 'focus' && timer.isRunning)
+  const { showBanner: connectivityBanner } = useConnectivity()
 
   return (
     <div className="flex min-h-dvh bg-[color:var(--color-canvas)] text-[color:var(--color-ink)] md:h-dvh md:min-h-0 md:overflow-hidden">
@@ -260,7 +262,11 @@ export function HomePage() {
         <AmbientPlayer ambient={ambient} />
       </aside>
 
-      <header className="fixed inset-x-0 top-0 z-20 flex items-center justify-between gap-2 border-b border-[color:var(--color-line)] bg-[color:var(--color-canvas)]/90 px-4 py-3 backdrop-blur-md md:hidden">
+      <header
+        className={`fixed inset-x-0 z-20 flex items-center justify-between gap-2 border-b border-[color:var(--color-line)] bg-[color:var(--color-canvas)]/90 px-4 py-3 backdrop-blur-md md:hidden ${
+          connectivityBanner ? 'top-10' : 'top-0'
+        }`}
+      >
         <div className="flex min-w-0 items-center gap-2">
           <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[color:var(--color-ink)]">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
@@ -297,7 +303,9 @@ export function HomePage() {
       <main
         id="main-content"
         tabIndex={-1}
-        className={`relative flex-1 px-5 pt-20 pb-16 outline-none md:px-12 md:pt-10 md:pb-10 ${
+        className={`relative flex-1 px-5 pb-16 outline-none md:px-12 md:pb-10 ${
+          connectivityBanner ? 'pt-[7.25rem] md:pt-[4.5rem]' : 'pt-20 md:pt-10'
+        } ${
           (view === 'timer' || view === 'block') && !isStrictLocked
             ? 'overflow-y-auto md:overflow-hidden'
             : 'overflow-y-auto'

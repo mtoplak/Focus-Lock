@@ -40,6 +40,18 @@ function toApiError(error: AxiosError): ApiError {
   )
 }
 
+/** True when the request never reached the server (offline, DNS, timeout). */
+export function isNetworkError(error: unknown): boolean {
+  if (error instanceof ApiError) {
+    return error.status === 0
+  }
+  if (error instanceof AxiosError) {
+    if (!error.response) return true
+    return error.code === 'ERR_NETWORK' || error.code === 'ECONNABORTED'
+  }
+  return false
+}
+
 let refreshPromise: Promise<AuthTokens> | null = null
 
 export async function refreshTokens(): Promise<AuthTokens> {
@@ -76,7 +88,10 @@ async function getValidAccessToken(): Promise<string | null> {
   try {
     const tokens = await refreshTokens()
     return tokens.access_token
-  } catch {
+  } catch (err) {
+    if (isNetworkError(err)) {
+      return access
+    }
     clearTokens()
     return null
   }
@@ -113,8 +128,10 @@ apiClient.interceptors.response.use(
         const tokens = await refreshTokens()
         config.headers.Authorization = `Bearer ${tokens.access_token}`
         return apiClient(config)
-      } catch {
-        clearTokens()
+      } catch (refreshErr) {
+        if (!isNetworkError(refreshErr)) {
+          clearTokens()
+        }
       }
     }
 
