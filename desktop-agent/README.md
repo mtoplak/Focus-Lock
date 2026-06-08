@@ -1,4 +1,4 @@
-# Focus Lock — Desktop Agent
+# Focus Lock – Desktop Agent
 
 Background service that blocks **desktop applications** and **URLs** during
 Focus Lock focus sessions. Your PWA (the React app in `../frontend/`) stays

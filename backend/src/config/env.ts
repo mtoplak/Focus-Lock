@@ -49,4 +49,9 @@ export const env = {
   frontendAuthCallbackUrl:
     process.env.FRONTEND_AUTH_CALLBACK_URL ??
     'http://localhost:5173/auth/callback',
+  push: {
+    vapidPublic: process.env.VAPID_PUBLIC_KEY ?? '',
+    vapidPrivate: process.env.VAPID_PRIVATE_KEY ?? '',
+    vapidSubject: process.env.VAPID_SUBJECT ?? 'mailto:me@gmail.com',
+  },
 } as const

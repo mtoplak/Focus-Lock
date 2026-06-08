@@ -2,6 +2,7 @@ import { useId } from 'react'
 import type { Settings } from '../types'
 import { DEFAULT_SETTINGS } from '../types'
 import { ensureNotificationPermission, notificationsSupported } from '../lib/notify'
+import { ensurePushSubscription } from '../lib/push'
 import { voiceControlSupported } from '../lib/voice/speechSupport'
 import { VoiceCommandList } from './VoiceCommandList'
 
@@ -28,7 +29,11 @@ export function SettingsView({ settings, onChange, strictLocked = false }: Setti
     }
     if (!supportsNotifications) return
     const permission = await ensureNotificationPermission()
-    update('notificationsEnabled', permission === 'granted')
+    const granted = permission === 'granted'
+    update('notificationsEnabled', granted)
+    // Register for web push so end-of-interval notifications arrive even with
+    // no tab open. Best-effort: silently no-ops when signed out / unsupported.
+    if (granted) void ensurePushSubscription()
   }
 
   return (

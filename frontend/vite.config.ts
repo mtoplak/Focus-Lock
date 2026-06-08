@@ -27,7 +27,7 @@ export default defineConfig({
       },
       manifest: {
         id: '/',
-        name: 'Focus Lock — Pomodoro timer with distraction blocking',
+        name: 'Focus Lock – Pomodoro timer with distraction blocking',
         short_name: 'Focus Lock',
         description:
           'A Pomodoro timer that blocks distracting apps and websites while you work, so deep focus stays intentional.',

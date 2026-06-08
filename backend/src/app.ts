@@ -6,6 +6,7 @@ import { errorHandler } from './middleware/errorHandler.js'
 import { authRouter } from './routes/auth.js'
 import { googleAuthRouter } from './routes/googleAuth.js'
 import { healthRouter } from './routes/health.js'
+import { pushRouter } from './routes/push.js'
 
 export function createApp() {
   const app = express()
@@ -22,6 +23,7 @@ export function createApp() {
   app.use('/api', healthRouter)
   app.use('/api', googleAuthRouter)
   app.use('/api', authRouter)
+  app.use('/api', pushRouter)
 
   app.use((_req, res) => {
     res.status(404).json({ error: 'Not found' })

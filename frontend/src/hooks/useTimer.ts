@@ -6,6 +6,7 @@ import {
   registerTimerSwResyncListener,
   scheduleTimerEndInSw,
 } from '../lib/timerSwSync'
+import { cancelPushEnd, schedulePushEnd } from '../lib/push'
 
 export interface UseTimerResult {
   mode: TimerMode
@@ -119,6 +120,18 @@ export function useTimer(
       clearTimerEndInSw()
     }
   }, [endsAt, mode, secondsLeft, settings.notificationsEnabled])
+
+  // Mirror the end-of-interval alarm to the backend so a Web Push fires even
+  // when no tab is open (the SW setTimeout above dies when the SW is killed).
+  // Keyed on endsAt — not secondsLeft — so it runs on start/pause/skip/reset
+  // transitions, not on every one-second tick.
+  useEffect(() => {
+    if (endsAt !== null && settings.notificationsEnabled) {
+      void schedulePushEnd(endsAt, mode)
+    } else {
+      void cancelPushEnd()
+    }
+  }, [endsAt, mode, settings.notificationsEnabled])
 
   useEffect(() => {
     return registerTimerSwResyncListener(() => {

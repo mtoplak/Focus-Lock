@@ -2,10 +2,15 @@ import { createApp } from './app.js'
 import { env } from './config/env.js'
 import { runMigrations } from './db/migrate.js'
 import { pool } from './db/pool.js'
+import { initPush, startPushPoller } from './services/pushService.js'
 
 async function start(): Promise<void> {
   if (env.runMigrationsOnStart) {
     await runMigrations()
+  }
+
+  if (initPush()) {
+    startPushPoller()
   }
 
   const app = createApp()

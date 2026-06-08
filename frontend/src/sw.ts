@@ -85,3 +85,30 @@ self.addEventListener('activate', (event) => {
     })(),
   )
 })
+
+// Server-sent end-of-interval notification — reliable even when no tab is open
+// (the SW setTimeout alarm above is best-effort and dies when the SW is killed).
+self.addEventListener('push', (event: PushEvent) => {
+  const data = (() => {
+    try {
+      return event.data?.json() as { type?: string; mode?: TimerMode } | undefined
+    } catch {
+      return undefined
+    }
+  })()
+  if (data?.type !== 'timer-end' || !data.mode) return
+
+  endAlarm.clear() // avoid double-firing if the local alarm is still pending
+  event.waitUntil(showTimerEndNotification(data.mode))
+})
+
+self.addEventListener('notificationclick', (event: NotificationEvent) => {
+  event.notification.close()
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      const existing = clients.find((client) => 'focus' in client)
+      if (existing) return existing.focus()
+      return self.clients.openWindow('/')
+    }),
+  )
+})

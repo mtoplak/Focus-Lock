@@ -1,4 +1,4 @@
-# Focus Lock — Backend
+# Focus Lock – Backend
 
 TypeScript + Express API with PostgreSQL and **Google Sign-In**.
 

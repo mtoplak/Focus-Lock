@@ -10,12 +10,12 @@ const TITLES: Record<TimerMode, Record<TimerNotifyEvent, string>> = {
 
 const BODIES: Record<TimerNotifyEvent, Record<TimerMode, string>> = {
   start: {
-    focus: 'Time to focus — eyes on the task.',
+    focus: 'Time to focus – eyes on the task.',
     'short-break': 'Take a quick breather.',
     'long-break': 'Step away and recharge.',
   },
   end: {
-    focus: 'Nice work — time for a break.',
+    focus: 'Nice work – time for a break.',
     'short-break': "Break's up. Ready to focus?",
     'long-break': 'Long break done. Back to it when you are ready.',
   },
