@@ -122,25 +122,6 @@ export function HomePage() {
 
   useAgentBlockStatsSync(setBlockCounts, setUrlBlockCounts)
 
-  const resetStats = useCallback(() => {
-    // Align the delta baseline with the agent's cumulative counters before
-    // clearing displayed stats — otherwise the next /status poll re-imports
-    // every URL/app block count as a "new" delta.
-    const cached = getCachedAgentState()
-    const immediate = {
-      kill: cached.status === 'connected' ? (cached.killCounts ?? {}) : {},
-      url: cached.status === 'connected' ? (cached.urlBlockCounts ?? {}) : {},
-    }
-    resetDisplayedStatsWithBaseline(immediate)
-    setHistory([])
-    setBlockCounts([])
-    setUrlBlockCounts([])
-
-    void fetchAgentBlockBaseline().then((baseline) => {
-      resetDisplayedStatsWithBaseline(baseline)
-    })
-  }, [setHistory, setBlockCounts, setUrlBlockCounts])
-
   const recordFocus = useCallback(
     (focusMinutes: number) => {
       setHistory((prev) => {
@@ -164,6 +145,27 @@ export function HomePage() {
   )
 
   const timer = useTimer(settings, recordFocus)
+
+  const resetStats = useCallback(() => {
+    // Align the delta baseline with the agent's cumulative counters before
+    // clearing displayed stats — otherwise the next /status poll re-imports
+    // every URL/app block count as a "new" delta.
+    const cached = getCachedAgentState()
+    const immediate = {
+      kill: cached.status === 'connected' ? (cached.killCounts ?? {}) : {},
+      url: cached.status === 'connected' ? (cached.urlBlockCounts ?? {}) : {},
+    }
+    resetDisplayedStatsWithBaseline(immediate)
+    setHistory([])
+    setBlockCounts([])
+    setUrlBlockCounts([])
+    timer.resetSessionStats()
+
+    void fetchAgentBlockBaseline().then((baseline) => {
+      resetDisplayedStatsWithBaseline(baseline)
+    })
+  }, [setHistory, setBlockCounts, setUrlBlockCounts, timer.resetSessionStats])
+
   const ambient = useAmbient()
 
   const isStrictLocked = settings.strictMode && timer.mode === 'focus' && timer.isRunning

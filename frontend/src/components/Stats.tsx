@@ -309,8 +309,9 @@ function ResetStatsDialog({
           Reset all stats?
         </h3>
         <p id="reset-stats-desc" className="mt-2 text-[14px] leading-relaxed text-[color:var(--color-ink-muted)]">
-          This permanently deletes your focus history, streaks, personal best, blocked-app counts,
-          and blocked-site counts from this browser. It cannot be undone.
+          This permanently deletes your focus history, streaks, personal best, today&apos;s session
+          count under the timer, blocked-app counts, and blocked-site counts from this browser. It
+          cannot be undone.
         </p>
         <p className="mt-2 text-[12.5px] text-[color:var(--color-ink-faint)]">
           Settings, your block list, and sign-in are not affected. Restart the desktop agent to

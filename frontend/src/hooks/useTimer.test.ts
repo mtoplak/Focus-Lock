@@ -67,6 +67,70 @@ describe('useTimer', () => {
     expect(result.current.completedFocusSessions).toBe(2)
   })
 
+  it('resetCycle resets long-break progress so the next focus goes to short break', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-06-04T10:00:00Z'))
+
+    localStorage.setItem(
+      'fl.timer.v1',
+      JSON.stringify({
+        mode: 'focus',
+        completedFocusSessions: 3,
+        cycleOffset: 0,
+        totalSeconds: 60,
+        secondsLeft: 60,
+        endsAt: null,
+      }),
+    )
+
+    const { result } = renderHook(() => useTimer(shortSettings, vi.fn()))
+
+    act(() => {
+      result.current.resetCycle()
+    })
+
+    expect(result.current.completedInCycle).toBe(0)
+    expect(result.current.completedFocusSessions).toBe(3)
+
+    act(() => {
+      result.current.start()
+    })
+    act(() => {
+      vi.advanceTimersByTime(60_000)
+    })
+
+    expect(result.current.mode).toBe('short-break')
+    expect(result.current.completedFocusSessions).toBe(4)
+    expect(result.current.completedInCycle).toBe(1)
+  })
+
+  it('resetSessionStats clears today session total and cycle progress', () => {
+    localStorage.setItem(
+      'fl.timer.v1',
+      JSON.stringify({
+        mode: 'short-break',
+        completedFocusSessions: 5,
+        cycleOffset: 2,
+        totalSeconds: 60,
+        secondsLeft: 30,
+        endsAt: null,
+      }),
+    )
+
+    const { result } = renderHook(() => useTimer(shortSettings, vi.fn()))
+
+    expect(result.current.completedFocusSessions).toBe(5)
+    expect(result.current.completedInCycle).toBe(3)
+
+    act(() => {
+      result.current.resetSessionStats()
+    })
+
+    expect(result.current.completedFocusSessions).toBe(0)
+    expect(result.current.completedInCycle).toBe(0)
+    expect(result.current.mode).toBe('short-break')
+  })
+
   it('resetCycle returns to focus 1 while keeping today session total', () => {
     localStorage.setItem(
       'fl.timer.v1',

@@ -18,6 +18,8 @@ export interface UseTimerResult {
   pause: () => void
   reset: () => void
   resetCycle: () => void
+  /** Clear today's session total and cycle progress (e.g. when resetting all stats). */
+  resetSessionStats: () => void
   skip: () => void
   completedFocusSessions: number
   /** Completed focus intervals in the current Pomodoro cycle (0 … sessionsUntilLongBreak − 1). */
@@ -248,8 +250,11 @@ export function useTimer(
       const nextCount = completedFocusSessions + 1
       setCompletedFocusSessions(nextCount)
       onFocusCompleteRef.current(settings.focusMinutes)
+      // Use in-cycle position (respects resetCycle), not today's cumulative total.
+      const completedInCycleAfter =
+        (nextCount - cycleOffset) % settings.sessionsUntilLongBreak
       const nextMode: TimerMode =
-        nextCount % settings.sessionsUntilLongBreak === 0 ? 'long-break' : 'short-break'
+        completedInCycleAfter === 0 ? 'long-break' : 'short-break'
       const seconds = modeDurationMinutes(nextMode, settings) * 60
       setModeState(nextMode)
       setTotalSeconds(seconds)
@@ -272,7 +277,7 @@ export function useTimer(
         setEndsAt(end)
       }
     }
-  }, [secondsLeft, endsAt, mode, settings, completedFocusSessions])
+  }, [secondsLeft, endsAt, mode, settings, completedFocusSessions, cycleOffset])
 
   const start = useCallback(() => {
     if (endsAtRef.current !== null) return // already running
@@ -326,6 +331,11 @@ export function useTimer(
     setSecondsLeft(seconds)
   }, [completedFocusSessions, settings.focusMinutes])
 
+  const resetSessionStats = useCallback(() => {
+    setCompletedFocusSessions(0)
+    setCycleOffset(0)
+  }, [])
+
   return {
     mode,
     setMode,
@@ -336,6 +346,7 @@ export function useTimer(
     pause,
     reset,
     resetCycle,
+    resetSessionStats,
     skip,
     completedFocusSessions,
     completedInCycle,

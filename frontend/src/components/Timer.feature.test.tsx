@@ -16,6 +16,7 @@ function buildTimer(overrides: Partial<UseTimerResult> = {}): UseTimerResult {
     pause: vi.fn(),
     reset: vi.fn(),
     resetCycle: vi.fn(),
+    resetSessionStats: vi.fn(),
     skip: vi.fn(),
     completedFocusSessions: 2,
     completedInCycle: 2,
