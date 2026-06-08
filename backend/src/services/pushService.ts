@@ -64,6 +64,9 @@ export function startPushPoller(intervalMs = 10_000): void {
   const tick = async (): Promise<void> => {
     try {
       const due = await claimDuePushes()
+      if (due.length > 0) {
+        console.log('[push] delivering', due.length, 'notification(s)')
+      }
       await Promise.all(
         due.map((row) => sendToUser(row.user_id, { type: 'timer-end', mode: row.mode })),
       )

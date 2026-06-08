@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useAuthOptional } from '../context/AuthContext'
 import type { Settings, TimerMode } from '../types'
 import { notifyTimer } from '../lib/notify'
 import {
@@ -6,7 +7,7 @@ import {
   registerTimerSwResyncListener,
   scheduleTimerEndInSw,
 } from '../lib/timerSwSync'
-import { cancelPushEnd, schedulePushEnd } from '../lib/push'
+import { cancelPushEnd, ensurePushSubscription, schedulePushEnd } from '../lib/push'
 
 export interface UseTimerResult {
   mode: TimerMode
@@ -106,6 +107,19 @@ export function useTimer(
   const settingsRef = useRef(settings)
   settingsRef.current = settings
 
+  const auth = useAuthOptional()
+  const pushReady = Boolean(auth?.user && !auth.isGuest && !auth.loading)
+
+  const syncPushSchedule = useCallback(async () => {
+    const end = endsAtRef.current
+    if (end === null || !settingsRef.current.notificationsEnabled || !pushReady) {
+      return false
+    }
+    const subscribed = await ensurePushSubscription()
+    if (!subscribed) return false
+    return schedulePushEnd(end, mode)
+  }, [mode, pushReady])
+
   // Keep the service worker's end-of-interval alarm in sync with persisted state.
   useEffect(() => {
     if (
@@ -125,15 +139,31 @@ export function useTimer(
 
   // Mirror the end-of-interval alarm to the backend so a Web Push fires even
   // when no tab is open (the SW setTimeout above dies when the SW is killed).
-  // Keyed on endsAt — not secondsLeft — so it runs on start/pause/skip/reset
-  // transitions, not on every one-second tick.
+  // Waits for auth before scheduling — a silent failure here left scheduled_pushes
+  // empty after a refresh with a running timer.
   useEffect(() => {
-    if (endsAt !== null && settings.notificationsEnabled) {
-      void schedulePushEnd(endsAt, mode)
-    } else {
+    if (endsAt === null || !settings.notificationsEnabled) {
       void cancelPushEnd()
+      return
     }
-  }, [endsAt, mode, settings.notificationsEnabled])
+    if (!pushReady) return
+
+    let cancelled = false
+    const push = async () => {
+      if (cancelled) return
+      await syncPushSchedule()
+    }
+
+    void push()
+    const id = window.setInterval(() => {
+      void push()
+    }, 10_000)
+
+    return () => {
+      cancelled = true
+      window.clearInterval(id)
+    }
+  }, [endsAt, mode, settings.notificationsEnabled, pushReady, syncPushSchedule])
 
   useEffect(() => {
     return registerTimerSwResyncListener(() => {
@@ -211,9 +241,9 @@ export function useTimer(
   useEffect(() => {
     if (secondsLeft > 0 || endsAt === null) return
 
-    // If the interval finished while the tab was closed (endsAt comfortably
-    // in the past), skip the bell and notification — the user wasn't there
-    // to receive them, and don't auto-start the next interval either.
+    // If the interval finished while the app was closed (endsAt in the past),
+    // skip in-page bell/notification — web push should have fired instead.
+    // Still honour auto-start so the cycle keeps moving when the app reopens.
     const silent = Date.now() - endsAt > 2000
 
     // Cancel the SW alarm first so we don't double-notify when the page is
@@ -259,8 +289,8 @@ export function useTimer(
       setModeState(nextMode)
       setTotalSeconds(seconds)
       setSecondsLeft(seconds)
-      if (!silent && settings.autoStartBreaks) {
-        if (settings.notificationsEnabled) void notifyTimer('start', nextMode)
+      if (settings.autoStartBreaks) {
+        if (!silent && settings.notificationsEnabled) void notifyTimer('start', nextMode)
         const end = Date.now() + seconds * 1000
         endsAtRef.current = end
         setEndsAt(end)
@@ -270,8 +300,8 @@ export function useTimer(
       setModeState('focus')
       setTotalSeconds(seconds)
       setSecondsLeft(seconds)
-      if (!silent && settings.autoStartFocus) {
-        if (settings.notificationsEnabled) void notifyTimer('start', 'focus')
+      if (settings.autoStartFocus) {
+        if (!silent && settings.notificationsEnabled) void notifyTimer('start', 'focus')
         const end = Date.now() + seconds * 1000
         endsAtRef.current = end
         setEndsAt(end)

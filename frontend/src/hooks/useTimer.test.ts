@@ -19,6 +19,20 @@ vi.mock('../lib/timerSwSync', () => ({
   registerTimerSwResyncListener: vi.fn(() => () => {}),
 }))
 
+vi.mock('../context/AuthContext', () => ({
+  useAuthOptional: () => ({
+    user: { id: 'user-1', email: 'a@b.c', name: 'Test', avatar_url: null },
+    isGuest: false,
+    loading: false,
+  }),
+}))
+
+vi.mock('../lib/push', () => ({
+  ensurePushSubscription: vi.fn().mockResolvedValue(true),
+  schedulePushEnd: vi.fn().mockResolvedValue(true),
+  cancelPushEnd: vi.fn(),
+}))
+
 const shortSettings: Settings = {
   ...DEFAULT_SETTINGS,
   focusMinutes: 1,
@@ -271,7 +285,7 @@ describe('useTimer', () => {
     expect(onFocusComplete).toHaveBeenCalledWith(1)
   })
 
-  it('silent catch-up after a long absence skips notifications and auto-start', () => {
+  it('silent catch-up after a long absence skips notifications but still auto-starts', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-06-04T10:00:00Z'))
 
@@ -298,7 +312,7 @@ describe('useTimer', () => {
 
     expect(result.current.mode).toBe('short-break')
     expect(result.current.completedFocusSessions).toBe(1)
-    expect(result.current.isRunning).toBe(false)
+    expect(result.current.isRunning).toBe(true)
     expect(notifyTimer).not.toHaveBeenCalled()
   })
 

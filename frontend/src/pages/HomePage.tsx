@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 import { useLocalStorage } from '../hooks/useLocalStorage'
 import { useAgentSync } from '../hooks/useAgent'
 import { useTimer } from '../hooks/useTimer'
@@ -27,6 +28,7 @@ import { useConnectivity } from '../hooks/useConnectivity'
 import { useScheduleActive } from '../hooks/useSchedule'
 import { resetDisplayedStatsWithBaseline } from '../lib/statsStorage'
 import { fetchAgentBlockBaseline, getCachedAgentState } from '../hooks/useAgent'
+import { ensurePushSubscription } from '../lib/push'
 import { DEFAULT_BLOCKED, DEFAULT_SCHEDULES, DEFAULT_SETTINGS } from '../types'
 
 type View = 'timer' | 'block' | 'schedule' | 'stats' | 'settings'
@@ -104,6 +106,7 @@ const todayISO = () => new Date().toISOString().slice(0, 10)
 export function HomePage() {
   const location = useLocation()
   const navigate = useNavigate()
+  const { isGuest, loading: authLoading } = useAuth()
   const view: View = PATH_TO_VIEW[location.pathname] ?? 'timer'
   const setView = (next: View) => navigate(VIEW_TO_PATH[next])
   const [task, setTask] = useState('')
@@ -188,6 +191,12 @@ export function HomePage() {
     },
     onNavigate: setView,
   })
+
+  // Register web push when notifications are already on (not only on Settings toggle).
+  useEffect(() => {
+    if (authLoading || isGuest || !settings.notificationsEnabled) return
+    void ensurePushSubscription()
+  }, [authLoading, isGuest, settings.notificationsEnabled])
 
   // Backfill settings fields added after earlier saves.
   useEffect(() => {

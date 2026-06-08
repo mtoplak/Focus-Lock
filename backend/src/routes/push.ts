@@ -56,7 +56,9 @@ pushRouter.post('/push/schedule', requireAuth, async (req, res, next) => {
     if (typeof endsAt !== 'number' || typeof mode !== 'string') {
       throw new AuthError('invalid_request', 'endsAt (ms) and mode are required', 400)
     }
-    await schedulePush({ userId: req.auth!.sub, mode, fireAt: new Date(endsAt) })
+    const fireAt = new Date(endsAt)
+    await schedulePush({ userId: req.auth!.sub, mode, fireAt })
+    console.log('[push] scheduled', { userId: req.auth!.sub, mode, fireAt: fireAt.toISOString() })
     res.status(201).json({ ok: true })
   } catch (error) {
     next(error)
