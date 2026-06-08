@@ -134,35 +134,85 @@ export function useAgent(): AgentState {
   return state
 }
 
-/**
- * Push the current block list and focus state to the local agent.
- * Silently no-ops if the agent isn't reachable.
- */
-export function useAgentSync(items: BlockedItem[], focusActive: boolean) {
-  const lastPayloadRef = useRef<string>('')
+export type AgentSyncPayload = {
+  apps: string[]
+  urls: string[]
+  focusActive: boolean
+}
 
-  useEffect(() => {
-    const apps = items
-      .filter((i) => i.enabled && i.kind === 'app')
-      .map((i) => i.label)
-    const urls = items
-      .filter((i) => i.enabled && i.kind === 'url')
-      .map((i) => i.label)
+const SYNC_RETRY_MS = 4000
 
-    const payload = JSON.stringify({ apps, urls, focusActive })
-    if (payload === lastPayloadRef.current) return
-    lastPayloadRef.current = payload
-
-    const controller = new AbortController()
-    fetch(`${AGENT_URL}/sync`, {
+/** POST the desired block state to the local desktop agent. */
+export async function pushAgentSync(
+  payload: AgentSyncPayload,
+  signal?: AbortSignal,
+): Promise<boolean> {
+  try {
+    const res = await fetch(`${AGENT_URL}/sync`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: payload,
-      signal: controller.signal,
-    }).catch(() => {
-      // agent not running — ignore
+      body: JSON.stringify({
+        apps: payload.apps,
+        urls: payload.urls,
+        focusActive: payload.focusActive,
+      }),
+      signal,
     })
+    return res.ok
+  } catch {
+    return false
+  }
+}
 
-    return () => controller.abort()
+function buildAgentSyncPayload(
+  items: BlockedItem[],
+  focusActive: boolean,
+): { payload: AgentSyncPayload; key: string } {
+  const apps = items
+    .filter((i) => i.enabled && i.kind === 'app')
+    .map((i) => i.label)
+  const urls = items
+    .filter((i) => i.enabled && i.kind === 'url')
+    .map((i) => i.label)
+  const payload = { apps, urls, focusActive }
+  return { payload, key: JSON.stringify(payload) }
+}
+
+/**
+ * Push the current block list and focus state to the local agent.
+ * Retries until the agent acknowledges the payload — a failed /sync while
+ * the browser is offline (or DevTools throttling blocks localhost) must not
+ * be treated as synced, or blocking never recovers when connectivity returns.
+ */
+export function useAgentSync(items: BlockedItem[], focusActive: boolean) {
+  const lastSyncedKeyRef = useRef<string>('')
+
+  useEffect(() => {
+    const { payload, key } = buildAgentSyncPayload(items, focusActive)
+    let cancelled = false
+
+    const push = () => {
+      if (cancelled) return
+      void pushAgentSync(payload).then((ok) => {
+        if (!cancelled && ok) {
+          lastSyncedKeyRef.current = key
+        }
+      })
+    }
+
+    push()
+
+    const id = window.setInterval(() => {
+      if (key !== lastSyncedKeyRef.current) push()
+    }, SYNC_RETRY_MS)
+
+    const onOnline = () => push()
+    window.addEventListener('online', onOnline)
+
+    return () => {
+      cancelled = true
+      window.clearInterval(id)
+      window.removeEventListener('online', onOnline)
+    }
   }, [items, focusActive])
 }
