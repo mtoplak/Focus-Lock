@@ -157,17 +157,17 @@ export function Timer({ timer, settings, task, onTaskChange, strictLocked = fals
           timer.skip()
           break
         case '1':
-          if (strictLocked) return
+          if (strictLocked || timer.isRunning) return
           e.preventDefault()
           timer.setMode('focus')
           break
         case '2':
-          if (strictLocked) return
+          if (strictLocked || timer.isRunning) return
           e.preventDefault()
           timer.setMode('short-break')
           break
         case '3':
-          if (strictLocked) return
+          if (strictLocked || timer.isRunning) return
           e.preventDefault()
           timer.setMode('long-break')
           break
@@ -224,9 +224,15 @@ export function Timer({ timer, settings, task, onTaskChange, strictLocked = fals
                 key={m}
                 type="button"
                 onClick={() => setMode(m)}
-                disabled={strictLocked}
+                disabled={strictLocked || isRunning}
                 aria-pressed={active}
-                title={strictLocked ? 'Locked by strict mode' : undefined}
+                title={
+                  strictLocked
+                    ? 'Locked by strict mode'
+                    : isRunning
+                      ? 'Pause or wait for the interval to finish before switching mode'
+                      : undefined
+                }
                 className={`rounded-full px-4 py-1.5 text-[13px] font-medium transition ${
                   active
                     ? 'bg-[color:var(--color-ink)] text-white'

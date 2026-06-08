@@ -238,6 +238,73 @@ describe('useTimer', () => {
     expect(notifyTimer).not.toHaveBeenCalled()
   })
 
+  it('ignores mode changes while an interval is running', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-06-04T10:00:00Z'))
+
+    const settings = {
+      ...shortSettings,
+      autoStartBreaks: true,
+      autoStartFocus: true,
+    }
+    const { result } = renderHook(() => useTimer(settings, vi.fn()))
+
+    act(() => {
+      result.current.start()
+    })
+    act(() => {
+      vi.advanceTimersByTime(60_000)
+    })
+
+    expect(result.current.mode).toBe('short-break')
+    expect(result.current.isRunning).toBe(true)
+    const endsAtBefore = Date.now() + result.current.secondsLeft * 1000
+
+    act(() => {
+      result.current.setMode('focus')
+      result.current.setMode('long-break')
+      result.current.setMode('short-break')
+    })
+
+    expect(result.current.mode).toBe('short-break')
+    expect(result.current.isRunning).toBe(true)
+    expect(result.current.secondsLeft).toBeGreaterThan(0)
+    expect(result.current.secondsLeft).toBeLessThanOrEqual(60)
+
+    act(() => {
+      vi.advanceTimersByTime(result.current.secondsLeft * 1000)
+    })
+
+    expect(result.current.mode).toBe('focus')
+    expect(result.current.isRunning).toBe(true)
+    expect(endsAtBefore).toBeLessThanOrEqual(Date.now())
+  })
+
+  it('does not reset when selecting the current mode while paused', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-06-04T10:00:00Z'))
+    const { result } = renderHook(() => useTimer(shortSettings, vi.fn()))
+
+    act(() => {
+      result.current.start()
+    })
+    act(() => {
+      vi.advanceTimersByTime(15_000)
+    })
+    act(() => {
+      result.current.pause()
+    })
+
+    expect(result.current.secondsLeft).toBe(45)
+
+    act(() => {
+      result.current.setMode('focus')
+    })
+
+    expect(result.current.secondsLeft).toBe(45)
+    expect(result.current.mode).toBe('focus')
+  })
+
   it('moves to long break after the last focus in a cycle', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-06-04T10:00:00Z'))

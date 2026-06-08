@@ -166,6 +166,10 @@ export function useTimer(
 
   const setMode = useCallback(
     (next: TimerMode) => {
+      // Switching mode is only for idle intervals. While running, changing tabs
+      // must not clear endsAt or the Pomodoro transition chain breaks.
+      if (next === mode || endsAtRef.current !== null) return
+
       const seconds = modeDurationMinutes(next, settings) * 60
       endsAtRef.current = null
       setModeState(next)
@@ -173,7 +177,7 @@ export function useTimer(
       setSecondsLeft(seconds)
       setEndsAt(null)
     },
-    [settings],
+    [settings, mode],
   )
 
   // Keep totals fresh if user updates settings while idle.
