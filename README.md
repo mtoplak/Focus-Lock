@@ -4,6 +4,8 @@ Monorepo with a React PWA frontend, Express API backend, PostgreSQL, and a
 native Rust agent that handles desktop-app and URL blocking on the user's
 machine.
 
+> **Platform support:** Focus Lock is currently designed for Windows machines only. The desktop agent and blocking functionality are not supported on macOS, so website and application blocking will not work there.
+
 - **Frontend** — Vite 6 + React 19 + Tailwind CSS 4 + `vite-plugin-pwa`
 - **Backend** — Node + Express 4 + TypeScript 5.7 (ESM)
 - **Database** — PostgreSQL 16, with Adminer for browsing
