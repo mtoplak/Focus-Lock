@@ -99,7 +99,9 @@ jobs:
           npm ci
           npx playwright install chromium
 
-      - name: Start the agent and the frontend
+      # A single step, because the runner stops background processes when the
+      # step that started them ends.
+      - name: Start the agent and the frontend, then run Playwright tests
         run: |
           Start-Process -FilePath "$PWD\desktop-agent\target\release\focuslock-agent.exe" `
             -RedirectStandardOutput "$PWD\agent.log" -RedirectStandardError "$PWD\agent.err.log"
@@ -115,10 +117,8 @@ jobs:
               }
             }
           }
-
-      - name: Run Playwright tests
-        working-directory: e2e
-        run: npx playwright test --project=agent
+          Set-Location e2e
+          npx playwright test --project=agent
 
       - name: Upload test results
         if: always()
