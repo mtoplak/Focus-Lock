@@ -59,7 +59,7 @@ Lokalni zagon potrebuje PostgreSQL (zaradi registracije v TC-FL-006). Naslov baz
 
 ## 3. Vključitev v cevovod
 
-Datoteka `.github/workflows/e2e.yml` (potek »Functional tests«) se sproži ob vsakem `push` na `main`, ob vsakem pull requestu in ročno (`workflow_dispatch`).
+Datoteka `.github/workflows/e2e.yml` (potek »Functional tests«) se sproži ob vsakem `push` (na katerokoli vejo), ob vsakem pull requestu in ročno (`workflow_dispatch`). Teče na `ubuntu-24.04`: oznaka `ubuntu-latest` od oktobra 2026 pomeni Ubuntu 26, za katerega Playwright 1.56 ne zna namestiti sistemskih knjižnic (`--with-deps`), zato je prvi zagon padel že pri namestitvi brskalnika.
 
 Potek posla `e2e`:
 
@@ -162,7 +162,7 @@ Lokalna izvedba (macOS, Node 24, Chromium 141.0.7390.37, PostgreSQL 17), 8. 11. 
 
 Celoten nabor teče vzporedno in traja približno 1,3 minute (vključno z zagonom strežnikov) (najdaljši je TC-FL-010 z enominutnim intervalom).
 
-Izvedba v cevovodu: rezultat je viden v zavihku **Actions** repozitorija (potek »Functional tests«) in kot check »Playwright results« na commitu. *(Dopolni s povezavo na prvi uspešen zagon.)*
+Izvedba v cevovodu (GitHub Actions, `ubuntu-24.04`, Node 22, PostgreSQL 16), veja `test/playwright-e2e`: **uspešno, 5/5** – https://github.com/mtoplak/Focus-Lock/actions/runs/42515366571. Rezultat je viden v zavihku **Actions** (potek »Functional tests«), kot check »Playwright results« na commitu in kot artefakt `playwright-report` (HTML poročilo).
 
 Opomba: obstoječi enotski testi (Vitest) imajo 2 neuspela testa, ki nista povezana s to nalogo: `notify.test.ts` in `timerNotificationContent.test.ts` pričakujeta pomišljaj »—«, aplikacija pa uporablja »–«. Zato enotski testi v cevovod niso vključeni, dokler se to ne uskladi.
 
