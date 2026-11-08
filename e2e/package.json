@@ -1,0 +1,17 @@
+{
+  "name": "focus-lock-e2e",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:web": "playwright test --project=web",
+    "test:agent": "playwright test --project=agent",
+    "typecheck": "tsc --noEmit",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.0",
+    "@types/node": "^22.13.10",
+    "typescript": "~5.7.2"
+  }
+}
