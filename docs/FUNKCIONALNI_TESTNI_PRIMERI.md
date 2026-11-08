@@ -11,7 +11,7 @@ Dokument vsebuje deset ročnih funkcionalnih testnih primerov za ključne uporab
 | **Predpogoji** | Frontend in backend aplikacije sta zagnana; uporabnik ni prijavljen; prikazana je prijavna stran. |
 | **Testni koraki** | 1. Odpri Focus Lock v brskalniku.<br>2. Na prijavni strani klikni gumb **Continue as guest**.<br>3. Počakaj, da se naloži glavna stran.<br>4. Odpri uporabniški meni. |
 | **Testni podatki** | Uporabniški račun ni potreben. |
-| **Pričakovani rezultat** | Prikaže se glavna stran s časovnikom. V uporabniškem meniju je navedeno, da se uporablja lokalni oziroma gostujoči način (**Local only — not synced**). |
+| **Pričakovani rezultat** | 1. Prikaže se prijavna stran z gumbom **Continue as guest**.<br>2. Aplikacija sprejme izbiro in uporabnika brez prijave spusti naprej.<br>3. Prikaže se glavna stran s časovnikom.<br>4. V uporabniškem meniju je navedeno, da se uporablja lokalni oziroma gostujoči način (**Local only — not synced**). |
 | **Dejanski rezultat** | Ni še izvedeno. |
 | **Status** | Ni izvedeno (Pass/Fail po izvedbi). |
 
@@ -24,7 +24,7 @@ Dokument vsebuje deset ročnih funkcionalnih testnih primerov za ključne uporab
 | **Predpogoji** | Uporabnik je v aplikaciji; izbran je način **Focus**; strogi način je izklopljen; časovnik ne teče. |
 | **Testni koraki** | 1. Zabeleži začetni prikazani čas.<br>2. Klikni **Start**.<br>3. Počakaj najmanj 3 sekunde.<br>4. Klikni **Pause**.<br>5. Preveri, da se odštevanje ustavi.<br>6. Klikni **Reset**. |
 | **Testni podatki** | Trajanje fokusa: 25 minut; začetna vrednost: `25:00`. |
-| **Pričakovani rezultat** | Po kliku **Start** začne čas upadati. Po kliku **Pause** se prikazani čas ne spreminja. Po kliku **Reset** se čas vrne na `25:00`, časovnik pa ostane ustavljen. |
+| **Pričakovani rezultat** | 1. Prikazan je začetni čas `25:00`, časovnik ne teče.<br>2. Časovnik se zažene in prikazani čas začne upadati.<br>3. Prikazani čas je nižji od `25:00`.<br>4. Časovnik se ustavi.<br>5. Prikazani čas se ne spreminja.<br>6. Čas se vrne na `25:00`, časovnik pa ostane ustavljen. |
 | **Dejanski rezultat** | Ni še izvedeno. |
 | **Status** | Ni izvedeno (Pass/Fail po izvedbi). |
 
@@ -37,7 +37,7 @@ Dokument vsebuje deset ročnih funkcionalnih testnih primerov za ključne uporab
 | **Predpogoji** | Aplikacija je odprta; Windows namizni agent je zagnan kot skrbnik in prikazan kot povezan; fokusna seja ne teče; `example.com` je pred testom dosegljiv. |
 | **Testni koraki** | 1. Odpri zavihek **Blocks**.<br>2. Vnesi `example.com` in klikni **Add**.<br>3. Vrni se na časovnik in klikni **Start**.<br>4. V novem zavihku brskalnika odpri `https://example.com`.<br>5. Ustavi oziroma ponastavi fokusno sejo.<br>6. Ponovno odpri `https://example.com`. |
 | **Testni podatki** | Spletno mesto: `example.com`. |
-| **Pričakovani rezultat** | Vnos `example.com` se prikaže na seznamu blokad. Med aktivno fokusno sejo spletno mesto ni dosegljivo. Ko fokusna seja ni več aktivna in ni aktivnega urnika, je spletno mesto ponovno dosegljivo. |
+| **Pričakovani rezultat** | 1. Prikaže se zavihek **Blocks** s seznamom blokad.<br>2. Vnos `example.com` se prikaže na seznamu blokad.<br>3. Prikaže se časovnik, fokusna seja se začne in čas odšteva.<br>4. Spletno mesto med aktivno fokusno sejo ni dosegljivo.<br>5. Fokusna seja ni več aktivna.<br>6. Ker fokusna seja ni več aktivna in ni aktivnega urnika, je spletno mesto ponovno dosegljivo. |
 | **Dejanski rezultat** | Ni še izvedeno. |
 | **Status** | Ni izvedeno (Pass/Fail po izvedbi). |
 
@@ -50,7 +50,7 @@ Dokument vsebuje deset ročnih funkcionalnih testnih primerov za ključne uporab
 | **Predpogoji** | Uporabnik je v aplikaciji; trenutno ni ustvarjenega enakega urnika; strogi način ne zaklepa sprememb. |
 | **Testni koraki** | 1. Odpri zavihek **Schedule**.<br>2. Izberi ponedeljek.<br>3. Nastavi začetni čas na `09:00` in končni čas na `10:00`.<br>4. Klikni **Add schedule**.<br>5. Preveri prikaz novega urnika.<br>6. Osveži stran brskalnika.<br>7. Ponovno odpri zavihek **Schedule**. |
 | **Testni podatki** | Dan: ponedeljek; začetek: `09:00`; konec: `10:00`. |
-| **Pričakovani rezultat** | Urnik za ponedeljek od `09:00` do `10:00` se prikaže na seznamu. Po osvežitvi strani je isti urnik še vedno prikazan z nespremenjenimi podatki. |
+| **Pričakovani rezultat** | 1. Prikaže se zavihek **Schedule**.<br>2. Ponedeljek je izbran.<br>3. Začetni čas je nastavljen na `09:00`, končni čas pa na `10:00`.<br>4. Urnik se doda.<br>5. Urnik za ponedeljek od `09:00` do `10:00` se prikaže na seznamu.<br>6. Stran se ponovno naloži.<br>7. Isti urnik je še vedno prikazan z nespremenjenimi podatki. |
 | **Dejanski rezultat** | Ni še izvedeno. |
 | **Status** | Ni izvedeno (Pass/Fail po izvedbi). |
 
@@ -63,7 +63,7 @@ Dokument vsebuje deset ročnih funkcionalnih testnih primerov za ključne uporab
 | **Predpogoji** | Uporabnik je v aplikaciji; statistika vsebuje najmanj eno dokončano fokusno sejo ali zabeležen dogodek blokiranja. |
 | **Testni koraki** | 1. Odpri zavihek **Stats**.<br>2. Zabeleži prikazane statistične vrednosti.<br>3. Klikni **Reset all stats**.<br>4. V potrditvenem pogovornem oknu klikni **Reset stats**.<br>5. Preveri statistiko in števec današnjih sej pri časovniku.<br>6. Osveži stran in znova preveri zavihek **Stats**. |
 | **Testni podatki** | Obstoječa zgodovina: najmanj 1 zaključena fokusna seja ali najmanj 1 blokiran dogodek. |
-| **Pričakovani rezultat** | Zgodovina sej, števci blokiranih mest/aplikacij in števec današnjih sej se ponastavijo na nič oziroma prazno stanje. Ponastavljeno stanje se ohrani po osvežitvi strani, nastavitve in seznam blokad pa ostanejo nespremenjeni. |
+| **Pričakovani rezultat** | 1. Prikaže se zavihek **Stats**.<br>2. Prikazane vrednosti vsebujejo najmanj eno zaključeno fokusno sejo ali blokiran dogodek.<br>3. Odpre se potrditveno pogovorno okno.<br>4. Pogovorno okno se zapre in ponastavitev se izvede.<br>5. Zgodovina sej, števci blokiranih mest/aplikacij in števec današnjih sej so ponastavljeni na nič oziroma prazno stanje.<br>6. Ponastavljeno stanje se po osvežitvi strani ohrani, nastavitve in seznam blokad pa ostanejo nespremenjeni. |
 | **Dejanski rezultat** | Ni še izvedeno. |
 | **Status** | Ni izvedeno (Pass/Fail po izvedbi). |
 
@@ -76,7 +76,7 @@ Dokument vsebuje deset ročnih funkcionalnih testnih primerov za ključne uporab
 | **Predpogoji** | Frontend, backend in podatkovna baza so zagnani; uporabnik ni prijavljen; e-poštni naslov še ni registriran. |
 | **Testni koraki** | 1. Odpri prijavno stran Focus Lock.<br>2. Izberi zavihek **Sign up**.<br>3. Vnesi ime, e-poštni naslov in geslo.<br>4. Klikni **Create account**.<br>5. Počakaj na zaključek registracije.<br>6. Odpri uporabniški meni. |
 | **Testni podatki** | Ime: `Testni Uporabnik`;<br>e-pošta: nov enoličen naslov, na primer `test.focuslock+006@example.com`;<br>geslo: `Testiranje123!`. |
-| **Pričakovani rezultat** | Račun se uspešno ustvari, uporabnik je preusmerjen na glavno stran s časovnikom, v uporabniškem meniju pa je prikazan registrirani e-poštni naslov. Sporočilo o napaki se ne prikaže. |
+| **Pričakovani rezultat** | 1. Prikaže se prijavna stran.<br>2. Prikaže se obrazec za registracijo.<br>3. Polja vsebujejo vnesene podatke.<br>4. Registracija se začne, sporočilo o napaki se ne prikaže.<br>5. Račun se uspešno ustvari, uporabnik je preusmerjen na glavno stran s časovnikom.<br>6. V uporabniškem meniju je prikazan registrirani e-poštni naslov. |
 | **Dejanski rezultat** | Ni še izvedeno. |
 | **Status** | Ni izvedeno (Pass/Fail po izvedbi). |
 
@@ -89,7 +89,7 @@ Dokument vsebuje deset ročnih funkcionalnih testnih primerov za ključne uporab
 | **Predpogoji** | Uporabnik je v aplikaciji; časovnik ne teče; izbran je način **Focus**. |
 | **Testni koraki** | 1. Odpri **Settings** in vključi **Strict mode**.<br>2. Vrni se na časovnik in klikni **Start**.<br>3. Poskusi uporabiti kontrole **Pause**, **Reset** in **Skip**.<br>4. Poskusi spremeniti način časovnika.<br>5. Odpri **Blocks** in poskusi dodati, odstraniti ali izklopiti vnos.<br>6. Odpri **Settings** in poskusi spremeniti trajanje seje. |
 | **Testni podatki** | Strogi način: vključen; način: **Focus**; poljuben obstoječi vnos na seznamu blokad. |
-| **Pričakovani rezultat** | Med tekočo fokusno sejo ni mogoče začasno ustaviti, ponastaviti ali preskočiti intervala, zamenjati načina, urejati seznama blokad ali spreminjati nastavitev. Časovnik še naprej odšteva. |
+| **Pričakovani rezultat** | 1. **Strict mode** je vključen.<br>2. Prikaže se časovnik, fokusna seja se začne in čas odšteva.<br>3. Intervala ni mogoče začasno ustaviti, ponastaviti ali preskočiti; časovnik še naprej odšteva.<br>4. Načina ni mogoče zamenjati; izbran ostane način **Focus**.<br>5. Seznama blokad ni mogoče urejati; vnosa ni mogoče dodati, odstraniti ali izklopiti.<br>6. Nastavitev ni mogoče spreminjati; trajanje seje ostane nespremenjeno, časovnik pa še naprej odšteva. |
 | **Dejanski rezultat** | Ni še izvedeno. |
 | **Status** | Ni izvedeno (Pass/Fail po izvedbi). |
 
@@ -102,7 +102,7 @@ Dokument vsebuje deset ročnih funkcionalnih testnih primerov za ključne uporab
 | **Predpogoji** | Test se izvaja v sistemu Windows; namizni agent je zagnan in prikazan kot povezan; fokusna seja ne teče; Beležnica (`notepad.exe`) je nameščena in ni na seznamu blokad. |
 | **Testni koraki** | 1. Odpri zavihek **Blocks** in izberi vrsto **App**.<br>2. Odpri izbirnik nameščenih aplikacij, izberi `notepad.exe` in ga dodaj na seznam.<br>3. Zaženi Beležnico in preveri, da ostane odprta.<br>4. Vrni se na časovnik in klikni **Start**.<br>5. Počakaj najmanj 3 sekunde.<br>6. Med še vedno aktivno fokusno sejo ponovno poskusi zagnati Beležnico. |
 | **Testni podatki** | Izvedljiva datoteka aplikacije: `notepad.exe`. |
-| **Pričakovani rezultat** | `notepad.exe` se prikaže kot omogočen vnos na seznamu blokad. Pred začetkom fokusa Beležnica deluje. Med aktivno fokusno sejo agent odprto Beležnico zapre, ob ponovnem zagonu pa jo v nekaj sekundah ponovno zapre. |
+| **Pričakovani rezultat** | 1. Prikaže se zavihek **Blocks**, izbrana je vrsta **App**.<br>2. `notepad.exe` se prikaže kot omogočen vnos na seznamu blokad.<br>3. Beležnica se zažene in pred začetkom fokusa ostane odprta.<br>4. Prikaže se časovnik, fokusna seja se začne in čas odšteva.<br>5. Agent odprto Beležnico zapre.<br>6. Agent ponovno zagnano Beležnico v nekaj sekundah zapre. |
 | **Dejanski rezultat** | Ni še izvedeno. |
 | **Status** | Ni izvedeno (Pass/Fail po izvedbi). |
 
@@ -115,7 +115,7 @@ Dokument vsebuje deset ročnih funkcionalnih testnih primerov za ključne uporab
 | **Predpogoji** | Focus Lock PWA je že nameščena ali vsaj enkrat uspešno naložena v podprtem brskalniku; uporabnik je v gostujočem načinu; začetna stran je odprta. |
 | **Testni koraki** | 1. V brskalniku oziroma operacijskem sistemu onemogoči internetno povezavo.<br>2. Preveri prikaz opozorila o nedosegljivi povezavi oziroma strežniku.<br>3. Zaženi fokusni časovnik.<br>4. Počakaj najmanj 5 sekund in osveži stran.<br>5. Preveri obnovljeno stanje časovnika.<br>6. Ponovno omogoči internetno povezavo. |
 | **Testni podatki** | Način: **Focus**; gostujoči način; internetna povezava: izklopljena med koraki 1–5. |
-| **Pričakovani rezultat** | Aplikacija opozori na težavo s povezavo, vendar ostane uporabna. Časovnik se brez interneta zažene in odšteva. Po osvežitvi se PWA ponovno odpre, stanje tekoče seje pa se obnovi iz lokalne shrambe. |
+| **Pričakovani rezultat** | 1. Internetna povezava je onemogočena, aplikacija ostane odprta.<br>2. Aplikacija opozori na težavo s povezavo, vendar ostane uporabna.<br>3. Časovnik se brez interneta zažene in odšteva.<br>4. PWA se po osvežitvi ponovno odpre.<br>5. Stanje tekoče seje se obnovi iz lokalne shrambe.<br>6. Internetna povezava je ponovno na voljo, aplikacija pa ostane uporabna. |
 | **Dejanski rezultat** | Ni še izvedeno. |
 | **Status** | Ni izvedeno (Pass/Fail po izvedbi). |
 
@@ -128,6 +128,6 @@ Dokument vsebuje deset ročnih funkcionalnih testnih primerov za ključne uporab
 | **Predpogoji** | Brskalnik podpira obvestila; dovoljenje za obvestila ni blokirano; Focus Lock je odprt; časovnik ne teče. |
 | **Testni koraki** | 1. Odpri **Settings**.<br>2. Nastavi trajanje **Focus** na 1 minuto.<br>3. Vključi možnost **Notifications**.<br>4. Če brskalnik zahteva dovoljenje, izberi **Allow**.<br>5. Vrni se na časovnik in klikni **Start**.<br>6. Počakaj, da se interval konča.<br>7. Preveri sistemska obvestila. |
 | **Testni podatki** | Trajanje fokusa: 1 minuta; obvestila: vključena; dovoljenje brskalnika: dovoljeno. |
-| **Pričakovani rezultat** | Nastavitev obvestil ostane vključena. Ob zaključku enominutnega fokusnega intervala se prikaže sistemsko obvestilo aplikacije Focus Lock, ki uporabnika obvesti o koncu intervala. |
+| **Pričakovani rezultat** | 1. Prikaže se zavihek **Settings**.<br>2. Trajanje **Focus** je nastavljeno na 1 minuto.<br>3. Možnost **Notifications** je vključena.<br>4. Dovoljenje je odobreno, nastavitev obvestil ostane vključena.<br>5. Prikaže se časovnik, enominutni fokusni interval se začne in čas odšteva.<br>6. Enominutni fokusni interval se zaključi.<br>7. Prikaže se sistemsko obvestilo aplikacije Focus Lock, ki uporabnika obvesti o koncu intervala. |
 | **Dejanski rezultat** | Ni še izvedeno. |
 | **Status** | Ni izvedeno (Pass/Fail po izvedbi). |
