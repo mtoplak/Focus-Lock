@@ -32,12 +32,17 @@ jobs:
 
       - name: Start the application
         working-directory: .
+        env:
+          # The backend refuses to start in production without these. Google
+          # sign-in is not exercised, so placeholders are enough.
+          GOOGLE_CLIENT_ID: e2e-placeholder
+          GOOGLE_CLIENT_SECRET: e2e-placeholder
         run: docker compose up --build --detach --wait db backend frontend
 
       - name: Wait for the frontend and API
         run: |
-          curl --fail --silent --retry 30 --retry-connrefused --retry-delay 2 http://localhost:3001/api/health
-          curl --fail --silent --retry 30 --retry-connrefused --retry-delay 2 --output /dev/null http://localhost:8080
+          curl --fail --silent --show-error --retry 30 --retry-all-errors --retry-delay 2 http://localhost:3001/api/health
+          curl --fail --silent --show-error --retry 30 --retry-all-errors --retry-delay 2 --output /dev/null http://localhost:8080
 
       - name: Run Playwright tests
         run: npx playwright test --project=web
