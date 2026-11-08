@@ -1,0 +1,81 @@
+name: Functional tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  e2e:
+    name: Functional tests (Playwright, TC-FL-006 – TC-FL-010)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: focuslock
+          POSTGRES_PASSWORD: focuslock
+          POSTGRES_DB: focuslock
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U focuslock -d focuslock"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      CI: true
+      E2E_DATABASE_URL: postgresql://focuslock:focuslock@localhost:5432/focuslock
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+            backend/package-lock.json
+
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: backend
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: frontend
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+        working-directory: frontend
+
+      - name: Run Playwright tests
+        run: npx playwright test
+        working-directory: frontend
+
+      - name: Publish test results
+        if: ${{ !cancelled() }}
+        uses: dorny/test-reporter@v1
+        with:
+          name: Playwright results
+          path: frontend/test-results/junit.xml
+          reporter: java-junit
+
+      - name: Upload HTML report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 14
+
+      - name: Upload traces, screenshots and videos of failed tests
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-test-results
+          path: frontend/test-results/
+          retention-days: 14
