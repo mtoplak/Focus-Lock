@@ -12,7 +12,7 @@ permissions:
 jobs:
   e2e:
     name: Functional tests (Playwright, TC-FL-006 – TC-FL-010)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     services:
       postgres:
@@ -62,6 +62,7 @@ jobs:
           name: Playwright results
           path: frontend/test-results/junit.xml
           reporter: java-junit
+          fail-on-empty: false
 
       - name: Upload HTML report
         if: ${{ !cancelled() }}
