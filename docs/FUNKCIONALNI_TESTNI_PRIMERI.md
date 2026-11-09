@@ -48,9 +48,9 @@ Dokument vsebuje deset ročnih funkcionalnih testnih primerov za ključne uporab
 | **ID testnega primera** | TC-FL-004 |
 | **Opis testa** | Preverjanje, ali uporabnik lahko doda ponavljajoči se urnik in ali ta ostane shranjen po osvežitvi strani. |
 | **Predpogoji** | Uporabnik je v aplikaciji; trenutno ni ustvarjenega enakega urnika; strogi način ne zaklepa sprememb. |
-| **Testni koraki** | 1. Odpri zavihek **Schedule**.<br>2. Izberi ponedeljek.<br>3. Nastavi začetni čas na `09:00` in končni čas na `10:00`.<br>4. Klikni **Add schedule**.<br>5. Preveri prikaz novega urnika.<br>6. Osveži stran brskalnika.<br>7. Ponovno odpri zavihek **Schedule**. |
+| **Testni koraki** | 1. Odpri zavihek **Schedule**.<br>2. Odznači vse dni razen ponedeljka (v izbirniku dni so privzeto izbrani vsi dnevi).<br>3. Nastavi začetni čas na `09:00` in končni čas na `10:00`.<br>4. Klikni **Add schedule**.<br>5. Preveri prikaz novega urnika.<br>6. Osveži stran brskalnika.<br>7. Ponovno odpri zavihek **Schedule**. |
 | **Testni podatki** | Dan: ponedeljek; začetek: `09:00`; konec: `10:00`. |
-| **Pričakovani rezultat** | 1. Prikaže se zavihek **Schedule**.<br>2. Ponedeljek je izbran.<br>3. Začetni čas je nastavljen na `09:00`, končni čas pa na `10:00`.<br>4. Urnik se doda.<br>5. Urnik za ponedeljek od `09:00` do `10:00` se prikaže na seznamu.<br>6. Stran se ponovno naloži.<br>7. Isti urnik je še vedno prikazan z nespremenjenimi podatki. |
+| **Pričakovani rezultat** | 1. Prikaže se zavihek **Schedule**.<br>2. Izbran je samo ponedeljek, vsi ostali dnevi so odznačeni.<br>3. Začetni čas je nastavljen na `09:00`, končni čas pa na `10:00`.<br>4. Urnik se doda.<br>5. Urnik za ponedeljek od `09:00` do `10:00` se prikaže na seznamu.<br>6. Stran se ponovno naloži.<br>7. Isti urnik je še vedno prikazan z nespremenjenimi podatki. |
 | **Dejanski rezultat** | Ni še izvedeno. |
 | **Status** | Ni izvedeno (Pass/Fail po izvedbi). |
 

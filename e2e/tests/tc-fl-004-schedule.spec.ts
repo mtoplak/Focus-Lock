@@ -30,7 +30,7 @@ test('TC-FL-004: Dodajanje in ohranitev urnika blokiranja', async ({ page }) => 
     await expect(scheduleRow(page)).toHaveCount(0)
   })
 
-  await test.step('2. Izberi ponedeljek', async () => {
+  await test.step('2. Odznači vse dni razen ponedeljka', async () => {
     // The form starts with every day selected, so only Monday is left on.
     for (const day of OTHER_DAYS) {
       await dayButton(page, day).click()
